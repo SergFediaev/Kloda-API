@@ -6,12 +6,16 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/swagger": "^1.1.1",
+    "drizzle-orm": "^0.33.0",
     "elysia": "latest",
-    "elysia-rate-limit": "^4.1.0"
+    "elysia-rate-limit": "^4.1.0",
+    "postgres": "^3.4.4"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.1",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "drizzle-kit": "^0.24.2"
   },
   "module": "src/index.js"
 }
