@@ -6,7 +6,7 @@ import { Elysia, t } from 'elysia'
 import { rateLimit } from 'elysia-rate-limit'
 import logixlysia from 'logixlysia'
 import postgres from 'postgres'
-import { cards } from './db/schema/cards'
+import { cards } from './db/schemas/cards'
 import { cardModel } from './models/card.model'
 
 const connectionString = process.env.DATABASE_URL
@@ -16,7 +16,9 @@ if (!connectionString) {
 }
 
 const migrationClient = postgres(connectionString, { max: 1 })
-await migrate(drizzle(migrationClient), { migrationsFolder: './drizzle' })
+await migrate(drizzle(migrationClient, { logger: true }), {
+	migrationsFolder: './drizzle',
+})
 
 const queryClient = postgres(connectionString)
 const db = drizzle(queryClient)

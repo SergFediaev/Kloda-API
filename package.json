@@ -3,7 +3,9 @@
 	"version": "1.0.50",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"dev": "bun run --watch src/index.ts"
+		"dev": "bun run --watch src/index.ts",
+		"kit": "bunx drizzle-kit studio",
+		"gen": "bun drizzle-kit generate"
 	},
 	"dependencies": {
 		"@elysiajs/swagger": "^1.1.1",
