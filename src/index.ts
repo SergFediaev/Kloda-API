@@ -26,8 +26,6 @@ const db = drizzle(queryClient)
 const app = new Elysia()
 	.use(
 		rateLimit({
-			max: 3,
-			duration: 90_000,
 			errorResponse: new Response(
 				'rate-limited: No more trolling, young hacker ;D',
 				{
