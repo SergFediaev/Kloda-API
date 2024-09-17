@@ -1,3 +1,4 @@
+import cors from '@elysiajs/cors'
 import swagger from '@elysiajs/swagger'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
@@ -48,6 +49,7 @@ const app = new Elysia()
 			},
 		}),
 	)
+	.use(cors())
 	.use(swagger())
 	.onError(({ error, code }) => {
 		if (code === 'NOT_FOUND') {
@@ -56,10 +58,10 @@ const app = new Elysia()
 
 		console.error(error)
 	})
-	.group('/v1', (app) =>
+	.group('/v1', app =>
 		app
-			.group('/cards', (app) => app.get('/', () => db.select().from(cards)))
-			.group('/card', (app) =>
+			.group('/cards', app => app.get('/', () => db.select().from(cards)))
+			.group('/card', app =>
 				app
 					.use(cardModel)
 					.get(
