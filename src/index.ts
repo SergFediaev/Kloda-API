@@ -1,7 +1,6 @@
 import swagger from '@elysiajs/swagger'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
-import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { Elysia, t } from 'elysia'
 import { rateLimit } from 'elysia-rate-limit'
 import logixlysia from 'logixlysia'
@@ -15,10 +14,10 @@ if (!connectionString) {
 	throw Error('Missing DATABASE_URL')
 }
 
-const migrationClient = postgres(connectionString, { max: 1 })
-await migrate(drizzle(migrationClient, { logger: true }), {
-	migrationsFolder: './drizzle',
-})
+// const migrationClient = postgres(connectionString, { max: 1 })
+// await migrate(drizzle(migrationClient, { logger: true }), {
+// 	migrationsFolder: './drizzle',
+// })
 
 const queryClient = postgres(connectionString)
 const db = drizzle(queryClient)
