@@ -1,21 +1,22 @@
 {
-  "name": "kloda-api",
-  "version": "1.0.50",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
-  },
-  "dependencies": {
-    "@elysiajs/swagger": "^1.1.1",
-    "drizzle-orm": "^0.33.0",
-    "elysia": "latest",
-    "elysia-rate-limit": "^4.1.0",
-    "postgres": "^3.4.4"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.9.1",
-    "bun-types": "latest",
-    "drizzle-kit": "^0.24.2"
-  },
-  "module": "src/index.js"
+	"name": "kloda-api",
+	"version": "1.0.50",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "bun run --watch src/index.ts"
+	},
+	"dependencies": {
+		"@elysiajs/swagger": "^1.1.1",
+		"drizzle-orm": "^0.33.0",
+		"elysia": "latest",
+		"elysia-rate-limit": "^4.1.0",
+		"logixlysia": "^3.6.1",
+		"postgres": "^3.4.4"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.1",
+		"bun-types": "latest",
+		"drizzle-kit": "^0.24.2"
+	},
+	"module": "src/index.js"
 }

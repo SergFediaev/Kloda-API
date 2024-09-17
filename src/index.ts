@@ -4,8 +4,10 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { Elysia, t } from 'elysia'
 import { rateLimit } from 'elysia-rate-limit'
+import logixlysia from 'logixlysia'
 import postgres from 'postgres'
-import { cards } from '../db/schema/cards'
+import { cards } from './db/schema/cards'
+import { cardModel } from './models/card.model'
 
 const connectionString = process.env.DATABASE_URL
 
@@ -36,35 +38,58 @@ const app = new Elysia()
 			),
 		}),
 	)
-	.use(swagger())
-	.get('/', () => 'Hello Kloda  ♠ ♣ ♤ ♧ 🃏')
-	.get('/get-all-cards', () => db.select().from(cards), {
-		response: t.Object({
-			name: t.String(),
+	.use(
+		logixlysia({
+			config: {
+				ip: true,
+				customLogFormat:
+					'🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}',
+			},
 		}),
-	})
-	.get(
-		'/get-card/:id',
-		({ params: { id } }) => db.select().from(cards).where(eq(cards.id, id)),
-		{ params: t.Object({ id: t.Number() }) },
 	)
-	// .post('/create-card', ({ body }) => {
-	// 	db.insert(cards).values(body)
-	// })
+	.use(swagger())
+	.onError(({ error, code }) => {
+		if (code === 'NOT_FOUND') {
+			return 'Not Found :('
+		}
+
+		console.error(error)
+	})
+	.group('/v1', (app) =>
+		app
+			.group('/cards', (app) => app.get('/', () => db.select().from(cards)))
+			.group('/card', (app) =>
+				app
+					.use(cardModel)
+					.get(
+						'/:id',
+						({ params: { id } }) =>
+							db.select().from(cards).where(eq(cards.id, id)),
+						{
+							params: t.Object({ id: t.Number() }),
+						},
+					)
+					.post(
+						'/',
+						async ({ body }) => {
+							const [createdCard] = await db
+								.insert(cards)
+								.values(body)
+								.returning()
+
+							console.log(createdCard)
+
+							return createdCard
+						},
+						{
+							body: 'cardBody',
+							response: 'cardResponse',
+						},
+					),
+			),
+	)
+	.get('/', () => 'Hello Kloda ♠')
+	.get('/redirect', ({ redirect }) => redirect('https://google.com/'))
 	.listen(3_000)
 
-console.log(
-	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
-)
-
 console.log(`View documentation at "${app.server?.url}swagger" in your browser`)
-
-// type Card = {
-// 	id: number
-// 	title: string
-// 	content: string
-// 	category: string[]
-// 	likes?: number
-// 	dislikes?: number
-// 	author: string
-// }
