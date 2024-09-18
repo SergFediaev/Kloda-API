@@ -57,13 +57,13 @@ const app = new Elysia()
 
     console.error(error)
   })
-  .group('/v1', app =>
-    app.group('/cards', app =>
+  .group('v1', app =>
+    app.group('cards', app =>
       app
         .use(cardModel)
         .get('/', () => db.select().from(cards))
         .get(
-          '/:id',
+          ':id',
           ({ params: { id } }) =>
             db.select().from(cards).where(eq(cards.id, id)),
           {
@@ -90,7 +90,7 @@ const app = new Elysia()
     ),
   )
   .get('/', () => 'Hello Kloda ♠')
-  .get('/redirect', ({ redirect }) => redirect('https://google.com/'))
+  .get('redirect', ({ redirect }) => redirect('https://google.com/'))
   .listen(3_000)
 
 console.log(`View documentation at "${app.server?.url}swagger" in your browser`)
