@@ -52,43 +52,42 @@ const app = new Elysia()
   .use(swagger())
   .onError(({ error, code }) => {
     if (code === 'NOT_FOUND') {
-      return 'Not Found :('
+      return 'Not Found 🙈'
     }
 
     console.error(error)
   })
   .group('/v1', app =>
-    app
-      .group('/cards', app => app.get('/', () => db.select().from(cards)))
-      .group('/card', app =>
-        app
-          .use(cardModel)
-          .get(
-            '/:id',
-            ({ params: { id } }) =>
-              db.select().from(cards).where(eq(cards.id, id)),
-            {
-              params: t.Object({ id: t.Number() }),
-            },
-          )
-          .post(
-            '/',
-            async ({ body }) => {
-              const [createdCard] = await db
-                .insert(cards)
-                .values(body)
-                .returning()
+    app.group('/cards', app =>
+      app
+        .use(cardModel)
+        .get('/', () => db.select().from(cards))
+        .get(
+          '/:id',
+          ({ params: { id } }) =>
+            db.select().from(cards).where(eq(cards.id, id)),
+          {
+            params: t.Object({ id: t.Number() }),
+          },
+        )
+        .post(
+          '/',
+          async ({ body }) => {
+            const [createdCard] = await db
+              .insert(cards)
+              .values(body)
+              .returning()
 
-              console.log(createdCard)
+            console.log(createdCard)
 
-              return createdCard
-            },
-            {
-              body: 'cardBody',
-              response: 'cardResponse',
-            },
-          ),
-      ),
+            return createdCard
+          },
+          {
+            body: 'cardBody',
+            response: 'cardResponse',
+          },
+        ),
+    ),
   )
   .get('/', () => 'Hello Kloda ♠')
   .get('/redirect', ({ redirect }) => redirect('https://google.com/'))
