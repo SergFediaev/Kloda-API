@@ -7,7 +7,7 @@ export const cardModel = new Elysia().model({
     categories: t.Array(t.String()),
     likes: t.Number(),
     dislikes: t.Number(),
-    author: t.String(),
+    authorId: t.String(),
   }),
   cardResponse: t.Object({
     id: t.Number(),
@@ -16,7 +16,7 @@ export const cardModel = new Elysia().model({
     categories: t.Array(t.String()),
     likes: t.Number(),
     dislikes: t.Number(),
-    author: t.String(),
+    authorId: t.String(),
     createdAt: t.Date(),
     updatedAt: t.Date(),
   }),
