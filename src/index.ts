@@ -179,7 +179,7 @@ const app = new Elysia()
 
               const accessToken = await jwt.sign({ id })
 
-              return { accessToken }
+              return { accessToken, id }
             },
             {
               body: 'registerBody',
