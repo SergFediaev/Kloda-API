@@ -1,4 +1,5 @@
 import cors from '@elysiajs/cors'
+import jwt from '@elysiajs/jwt'
 import swagger from '@elysiajs/swagger'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
@@ -8,12 +9,21 @@ import { rateLimit } from 'elysia-rate-limit'
 import logixlysia from 'logixlysia'
 import postgres from 'postgres'
 import { cards } from './db/schemas/cards'
+import { users } from './db/schemas/users'
+import { lower } from './db/schemas/utils'
 import { cardModel } from './models/card.model'
+import { registerModel } from './models/register.model'
 
 const connectionString = process.env.DATABASE_URL
 
 if (!connectionString) {
   throw Error('Missing DATABASE_URL')
+}
+
+const secret = process.env.JWT_SECRET
+
+if (!secret) {
+  throw Error('Missing JWT_SECRET')
 }
 
 const migrationClient = postgres(connectionString, { max: 1 })
@@ -49,8 +59,19 @@ const app = new Elysia()
     }),
   )
   .use(cors())
-  .use(swagger())
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: 'Kloda API documentation',
+          version: '1.0.0',
+        },
+      },
+    }),
+  )
   .onError(({ error, code }) => {
+    console.error(error)
+
     if (code === 'NOT_FOUND') {
       return 'Not Found 🙈'
     }
@@ -58,36 +79,115 @@ const app = new Elysia()
     console.error(error)
   })
   .group('v1', app =>
-    app.group('cards', app =>
-      app
-        .use(cardModel)
-        .get('/', () => db.select().from(cards))
-        .get(
-          ':id',
-          ({ params: { id } }) =>
-            db.select().from(cards).where(eq(cards.id, id)),
-          {
-            params: t.Object({ id: t.Number() }),
-          },
-        )
-        .post(
-          '/',
-          async ({ body }) => {
-            const [createdCard] = await db
-              .insert(cards)
-              .values(body)
-              .returning()
+    app
+      .group('cards', app =>
+        app
+          .use(cardModel)
+          .get('/', () => db.select().from(cards))
+          .get(
+            ':id',
+            ({ params: { id } }) =>
+              db.select().from(cards).where(eq(cards.id, id)),
+            {
+              params: t.Object({ id: t.Number() }),
+            },
+          )
+          .post(
+            '/',
+            async ({ body }) => {
+              const [createdCard] = await db
+                .insert(cards)
+                .values(body)
+                .returning()
 
-            console.log(createdCard)
+              console.log(createdCard)
 
-            return createdCard
-          },
-          {
-            body: 'cardBody',
-            response: 'cardResponse',
-          },
-        ),
-    ),
+              return createdCard
+            },
+            {
+              body: 'cardBody',
+              response: 'cardResponse',
+            },
+          ),
+      )
+      .group('auth', app =>
+        app
+          .use(registerModel)
+          .use(jwt({ secret }))
+          .post(
+            'register',
+            async ({
+              body: { username, email, password },
+              jwt,
+              cookie,
+              error,
+            }) => {
+              const isUsernameExisting = await db
+                .select()
+                .from(users)
+                .where(eq(lower(users.username), username.toLowerCase()))
+
+              if (isUsernameExisting.length) {
+                const usernameError = error(400, 'Username already exists')
+
+                console.error(usernameError)
+
+                return usernameError
+              }
+
+              const isEmailExisting = await db
+                .select()
+                .from(users)
+                .where(eq(lower(users.email), email.toLowerCase()))
+
+              if (isEmailExisting.length) {
+                const emailError = error(400, 'Email already exists')
+
+                console.error(emailError)
+
+                return emailError
+              }
+
+              const hashedPassword = await Bun.password.hash(password)
+
+              const [user] = await db
+                .insert(users)
+                .values({
+                  username,
+                  email,
+                  password: hashedPassword,
+                  createdCards: [],
+                  favoriteCards: [],
+                  likedCards: [],
+                  dislikedCards: [],
+                })
+                .returning()
+
+              console.log(user)
+
+              const id = user.id
+
+              const refreshToken = await jwt.sign({
+                id,
+                sub: String(id),
+              })
+
+              const hashedToken = new Bun.CryptoHasher('sha512')
+                .update(refreshToken)
+                .digest('hex')
+
+              cookie.refreshToken.set({
+                value: hashedToken,
+                httpOnly: true,
+              })
+
+              const accessToken = await jwt.sign({ id })
+
+              return { accessToken }
+            },
+            { body: 'registerBody' },
+          ),
+      ),
   )
   .get('/', () => 'Hello Kloda ♠')
   .get('redirect', ({ redirect }) => redirect('https://google.com/'))
