@@ -6,4 +6,8 @@ export const registerModel = new Elysia().model({
     email: t.String(),
     password: t.String(),
   }),
+  registerResponse: t.Union([
+    t.Object({ accessToken: t.String() }),
+    t.Object({ message: t.String() }),
+  ]),
 })

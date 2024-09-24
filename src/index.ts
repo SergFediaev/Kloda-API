@@ -1,7 +1,7 @@
 import cors from '@elysiajs/cors'
 import jwt from '@elysiajs/jwt'
 import swagger from '@elysiajs/swagger'
-import { eq } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { Elysia, t } from 'elysia'
@@ -120,7 +120,7 @@ const app = new Elysia()
               body: { username, email, password },
               jwt,
               cookie,
-              error,
+              set,
             }) => {
               const isUsernameExisting = await db
                 .select()
@@ -128,11 +128,9 @@ const app = new Elysia()
                 .where(eq(lower(users.username), username.toLowerCase()))
 
               if (isUsernameExisting.length) {
-                const usernameError = error(400, 'Username already exists')
+                set.status = 400
 
-                console.error(usernameError)
-
-                return usernameError
+                return { message: 'Username already exists' }
               }
 
               const isEmailExisting = await db
@@ -141,11 +139,9 @@ const app = new Elysia()
                 .where(eq(lower(users.email), email.toLowerCase()))
 
               if (isEmailExisting.length) {
-                const emailError = error(400, 'Email already exists')
+                set.status = 400
 
-                console.error(emailError)
-
-                return emailError
+                return { message: 'Email already exists' }
               }
 
               const hashedPassword = await Bun.password.hash(password)
@@ -185,7 +181,29 @@ const app = new Elysia()
 
               return { accessToken }
             },
-            { body: 'registerBody' },
+            {
+              body: 'registerBody',
+              response: 'registerResponse',
+            },
+          ),
+      )
+      .group('users', app =>
+        app
+          .get('/', () => {
+            const { password, ...restUser } = getTableColumns(users)
+
+            return db.select(restUser).from(users)
+          })
+          .get(
+            ':id',
+            ({ params: { id } }) => {
+              const { password, ...restUser } = getTableColumns(users)
+
+              return db.select(restUser).from(users).where(eq(users.id, id))
+            },
+            {
+              params: t.Object({ id: t.Number() }),
+            },
           ),
       ),
   )
