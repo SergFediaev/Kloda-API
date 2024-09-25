@@ -20,6 +20,6 @@ export const registerModel = new Elysia().model({
     }),
   ]),
   registerCookie: t.Cookie({
-    refreshToken: t.String(),
+    refreshToken: t.Optional(t.String()),
   }),
 })
