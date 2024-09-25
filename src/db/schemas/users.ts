@@ -19,7 +19,7 @@ export const users = pgTable(
     favoriteCards: varchar('favorite_cards', { length: 256 }).array().notNull(),
     likedCards: varchar('liked_cards', { length: 256 }).array().notNull(),
     dislikedCards: varchar('disliked_cards', { length: 256 }).array().notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
+    registeredAt: timestamp('registered_at').notNull().defaultNow(),
   },
   table => ({
     usernameUniqueIndex: uniqueIndex('usernameUniqueIndex').on(

@@ -1,18 +1,21 @@
 import cors from '@elysiajs/cors'
+import { html } from '@elysiajs/html'
 import jwt from '@elysiajs/jwt'
 import swagger from '@elysiajs/swagger'
 import { eq, getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { rateLimit } from 'elysia-rate-limit'
 import logixlysia from 'logixlysia'
 import postgres from 'postgres'
 import { cards } from './db/schemas/cards'
 import { users } from './db/schemas/users'
 import { lower } from './db/schemas/utils'
-import { cardModel } from './models/card.model'
+import { cardsModel } from './models/cards.model'
+import { queryModel } from './models/query.model'
 import { registerModel } from './models/register.model'
+import { usersModel } from './models/users.model'
 
 const connectionString = process.env.DATABASE_URL
 
@@ -33,6 +36,8 @@ await migrate(drizzle(migrationClient, { logger: true }), {
 
 const queryClient = postgres(connectionString)
 const db = drizzle(queryClient)
+
+const FRONT_URL = 'https://kloda.fediaev.ru'
 
 const app = new Elysia()
   .use(
@@ -73,42 +78,31 @@ const app = new Elysia()
     console.error(error)
 
     if (code === 'NOT_FOUND') {
-      return 'Not Found 🙈'
+      return 'Not found 🙈'
     }
-
-    console.error(error)
   })
   .group('v1', app =>
     app
+      .use(queryModel)
       .group('cards', app =>
         app
-          .use(cardModel)
-          .get('/', () => db.select().from(cards))
+          .use(cardsModel)
+          .get('/', () => db.select().from(cards), {
+            response: 'cardsResponse',
+          })
           .get(
             ':id',
             ({ params: { id } }) =>
               db.select().from(cards).where(eq(cards.id, id)),
             {
-              params: t.Object({ id: t.Number() }),
+              params: 'idParams',
+              response: 'cardsResponse',
             },
           )
-          .post(
-            '/',
-            async ({ body }) => {
-              const [createdCard] = await db
-                .insert(cards)
-                .values(body)
-                .returning()
-
-              console.log(createdCard)
-
-              return createdCard
-            },
-            {
-              body: 'cardBody',
-              response: 'cardResponse',
-            },
-          ),
+          .post('/', ({ body }) => db.insert(cards).values(body).returning(), {
+            body: 'cardBody',
+            response: 'cardsResponse',
+          }),
       )
       .group('auth', app =>
         app
@@ -184,16 +178,24 @@ const app = new Elysia()
             {
               body: 'registerBody',
               response: 'registerResponse',
+              cookie: 'registerCookie',
             },
           ),
       )
       .group('users', app =>
         app
-          .get('/', () => {
-            const { password, ...restUser } = getTableColumns(users)
+          .use(usersModel)
+          .get(
+            '/',
+            () => {
+              const { password, ...restUser } = getTableColumns(users)
 
-            return db.select(restUser).from(users)
-          })
+              return db.select(restUser).from(users)
+            },
+            {
+              response: 'usersResponse',
+            },
+          )
           .get(
             ':id',
             ({ params: { id } }) => {
@@ -202,13 +204,60 @@ const app = new Elysia()
               return db.select(restUser).from(users).where(eq(users.id, id))
             },
             {
-              params: t.Object({ id: t.Number() }),
+              params: 'idParams',
+              response: 'usersResponse',
             },
           ),
       ),
   )
-  .get('/', () => 'Hello Kloda ♠')
-  .get('redirect', ({ redirect }) => redirect('https://google.com/'))
+  .use(html())
+  .get(
+    '/',
+    ({ server }) => `
+      <html lang='en'>
+        <head>
+          <title>Kloda API ♤</title>
+          <style>
+            html {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100svh;
+            }
+            
+            body {
+              background-color: black;
+              color: antiquewhite;
+              font-family: Arial, Helvetica, sans-serif;
+            }
+            
+            ul {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            
+            a {
+              color: orange;
+              text-underline-offset: 4px;
+            }
+            
+            a:hover {
+              color: coral;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Kloda API ♤</h1>
+          <ul>
+            <li><a href=${server?.url}swagger>Swagger</a></li>
+            <li>Frontend: <a href=${FRONT_URL}>kloda.fediaev.ru</a></li>
+          </ul>
+        </body>
+      </html>
+    `,
+  )
+  .get('front', ({ redirect }) => redirect(FRONT_URL))
   .listen(3_000)
 
 console.log(`View documentation at "${app.server?.url}swagger" in your browser`)

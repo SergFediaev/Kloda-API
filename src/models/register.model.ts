@@ -1,11 +1,15 @@
 import { Elysia, t } from 'elysia'
+import { userModel } from './users.model'
 
 export const registerModel = new Elysia().model({
-  registerBody: t.Object({
-    username: t.String(),
-    email: t.String(),
-    password: t.String(),
-  }),
+  registerBody: t.Omit(userModel, [
+    'id',
+    'createdCards',
+    'favoriteCards',
+    'likedCards',
+    'dislikedCards',
+    'registeredAt',
+  ]),
   registerResponse: t.Union([
     t.Object({
       accessToken: t.String(),
@@ -15,4 +19,7 @@ export const registerModel = new Elysia().model({
       message: t.String(),
     }),
   ]),
+  registerCookie: t.Cookie({
+    refreshToken: t.String(),
+  }),
 })
