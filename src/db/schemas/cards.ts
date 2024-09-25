@@ -1,4 +1,3 @@
-import { sql } from 'drizzle-orm'
 import {
   integer,
   pgTable,
@@ -17,8 +16,5 @@ export const cards = pgTable('cards', {
   dislikes: integer('dislikes').default(0).notNull(),
   authorId: varchar('author_id', { length: 256 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => sql`now()`),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })

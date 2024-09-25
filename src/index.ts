@@ -11,7 +11,7 @@ import logixlysia from 'logixlysia'
 import postgres from 'postgres'
 import { cards } from './db/schemas/cards'
 import { users } from './db/schemas/users'
-import { lower } from './db/schemas/utils'
+import { increment, lower } from './db/schemas/utils'
 import { cardsModel } from './models/cards.model'
 import { queryModel } from './models/query.model'
 import { registerModel } from './models/register.model'
@@ -102,7 +102,29 @@ const app = new Elysia()
           .post('/', ({ body }) => db.insert(cards).values(body).returning(), {
             body: 'cardBody',
             response: 'cardsResponse',
-          }),
+          })
+          .patch(
+            ':id/like',
+            ({ params: { id } }) =>
+              db
+                .update(cards)
+                .set({ likes: increment(cards.likes) })
+                .where(eq(cards.id, id)),
+            {
+              params: 'idParams',
+            },
+          )
+          .patch(
+            ':id/dislike',
+            ({ params: { id } }) =>
+              db
+                .update(cards)
+                .set({ dislikes: increment(cards.dislikes) })
+                .where(eq(cards.id, id)),
+            {
+              params: 'idParams',
+            },
+          ),
       )
       .group('auth', app =>
         app
@@ -217,18 +239,21 @@ const app = new Elysia()
       <html lang='en'>
         <head>
           <title>Kloda API ♤</title>
+          <meta name='viewport' content='width=device-width, initial-scale=1' />
           <style>
             html {
               display: flex;
               justify-content: center;
               align-items: center;
               height: 100svh;
+              overflow-wrap: anywhere;
             }
             
             body {
               background-color: black;
               color: antiquewhite;
               font-family: Arial, Helvetica, sans-serif;
+              padding: 10px;
             }
             
             ul {
@@ -250,9 +275,11 @@ const app = new Elysia()
         <body>
           <h1>Kloda API ♤</h1>
           <ul>
-            <li><a href=swagger>Swagger</a></li>
-            <li>Frontend: <a href=${FRONT_URL}>kloda.fediaev.ru</a></li>
+            <li>Backend documentation: <a href=swagger>Swagger</a></li>
+            <li>Backend GitHub:<br><a href=https://github.com/SergFediaev/kloda-api>github.com/SergFediaev/kloda-api</a></li>
+            <li>Frontend: <a href=${FRONT_URL}>Kloda.Fediaev.ru</a></li>
           </ul>
+          <p>© ${new Date().getFullYear()} <a href=mailto:SergFediaev@gmail.com>Sergei Fediaev</a> ✉</p>
         </body>
       </html>
     `,
