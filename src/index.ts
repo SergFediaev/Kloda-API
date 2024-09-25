@@ -213,7 +213,7 @@ const app = new Elysia()
   .use(html())
   .get(
     '/',
-    ({ server }) => `
+    () => `
       <html lang='en'>
         <head>
           <title>Kloda API ♤</title>
@@ -250,7 +250,7 @@ const app = new Elysia()
         <body>
           <h1>Kloda API ♤</h1>
           <ul>
-            <li><a href=${server?.url}swagger>Swagger</a></li>
+            <li><a href=swagger>Swagger</a></li>
             <li>Frontend: <a href=${FRONT_URL}>kloda.fediaev.ru</a></li>
           </ul>
         </body>
