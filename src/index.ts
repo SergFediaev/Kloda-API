@@ -37,7 +37,7 @@ await migrate(drizzle(migrationClient, { logger: true }), {
 const queryClient = postgres(connectionString)
 const db = drizzle(queryClient)
 
-const TITLE = 'Kloda API ♣'
+const TITLE = 'Kloda API ♤'
 const FRONT_URL = 'https://kloda.fediaev.ru'
 
 const app = new Elysia()
