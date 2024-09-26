@@ -270,7 +270,7 @@ const app = new Elysia()
           <ul>
             <li>Backend documentation: <a href=swagger>Swagger</a></li>
             <li>Backend GitHub:<br><a href=https://github.com/SergFediaev/kloda-api>github.com/SergFediaev/kloda-api</a></li>
-            <li>Frontend: <a href=${FRONT_URL}>Kloda.Fediaev.ru</a></li>
+            <li>Frontend: <a href=${FRONT_URL}>kloda.fediaev.ru</a></li>
           </ul>
           <p>© ${new Date().getFullYear()} <a href=mailto:SergFediaev@gmail.com>Sergei Fediaev</a> ✉</p>
         </body>
