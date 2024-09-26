@@ -29,6 +29,13 @@
       "when": 1727263543130,
       "tag": "0003_cool_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1727338996251,
+      "tag": "0004_lethal_gideon",
+      "breakpoints": true
     }
   ]
 }

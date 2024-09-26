@@ -11,7 +11,7 @@ import { cards } from './cards'
 export const comments = pgTable('comments', {
   id: serial('id').primaryKey(),
   cardId: integer('card_id').references(() => cards.id),
-  content: text('content'),
-  author: varchar('author', { length: 256 }),
-  createdAt: timestamp('created_at').defaultNow(),
+  content: text('content').notNull(),
+  authorId: varchar('author_id', { length: 256 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 })

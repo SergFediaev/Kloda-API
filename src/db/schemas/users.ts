@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   pgTable,
   serial,
@@ -15,10 +16,22 @@ export const users = pgTable(
     username: varchar('username', { length: 256 }).unique().notNull(),
     email: text('email').unique().notNull(),
     password: varchar('password', { length: 256 }).notNull(),
-    createdCards: varchar('created_cards', { length: 256 }).array().notNull(),
-    favoriteCards: varchar('favorite_cards', { length: 256 }).array().notNull(),
-    likedCards: varchar('liked_cards', { length: 256 }).array().notNull(),
-    dislikedCards: varchar('disliked_cards', { length: 256 }).array().notNull(),
+    createdCards: varchar('created_cards', { length: 256 })
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    favoriteCards: varchar('favorite_cards', { length: 256 })
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    likedCards: varchar('liked_cards', { length: 256 })
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    dislikedCards: varchar('disliked_cards', { length: 256 })
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     registeredAt: timestamp('registered_at').notNull().defaultNow(),
   },
   table => ({

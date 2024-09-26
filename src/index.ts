@@ -42,16 +42,13 @@ const FRONT_URL = 'https://kloda.fediaev.ru'
 const app = new Elysia()
   .use(
     rateLimit({
-      errorResponse: new Response(
-        'rate-limited: No more trolling, young hacker ;D',
-        {
-          status: 429,
-          headers: new Headers({
-            'Content-Type': 'text/plain',
-            'Custom-Header': 'custom',
-          }),
-        },
-      ),
+      errorResponse: new Response('rate-limited: Too many requests', {
+        status: 429,
+        headers: new Headers({
+          'Content-Type': 'text/plain',
+          'Custom-Header': 'custom',
+        }),
+      }),
     }),
   )
   .use(
@@ -168,10 +165,6 @@ const app = new Elysia()
                   username,
                   email,
                   password: hashedPassword,
-                  createdCards: [],
-                  favoriteCards: [],
-                  likedCards: [],
-                  dislikedCards: [],
                 })
                 .returning()
 
