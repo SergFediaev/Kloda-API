@@ -43,7 +43,9 @@ export const db = drizzle(queryClient)
 
 const FRONT_URL = 'https://kloda.fediaev.ru'
 
+const invalidCreds = { message: 'Invalid credentials' }
 const unauthorized = { message: 'Unauthorized' }
+
 const ACCESS_TOKEN_EXP = 5 * 60 // 5 minutes
 const REFRESH_TOKEN_EXP = 7 * 86400 // 7 days
 
@@ -219,7 +221,7 @@ const app = new Elysia()
 
                 console.error('User not found')
 
-                return { message: 'Invalid credentials' }
+                return invalidCreds
               }
 
               const isPasswordValid = await Bun.password.verify(
@@ -232,7 +234,7 @@ const app = new Elysia()
 
                 console.error('Invalid password')
 
-                return { message: 'Invalid credentials' }
+                return invalidCreds
               }
 
               const refreshToken = await jwt.sign({
@@ -261,7 +263,6 @@ const app = new Elysia()
               response: 'loginResponse', // ToDo: Login response
             },
           )
-          .post('logout', () => 'Logout') // ToDo: Logout
           .post(
             'refresh',
             async ({ cookie, jwt, set }) => {
@@ -360,7 +361,29 @@ const app = new Elysia()
             const { password, refreshToken, ...restUser } = user
 
             return restUser
-          }),
+          })
+          .post(
+            'logout',
+            async ({ cookie: { refreshToken }, user, set }) => {
+              if (!user) {
+                set.status = 401
+
+                console.error('User not found')
+
+                return unauthorized
+              }
+
+              await db
+                .update(users)
+                .set({ refreshToken: null })
+                .where(eq(users.id, user.id))
+
+              refreshToken.remove()
+            },
+            {
+              cookie: 'registerCookie', // ToDo: Logout cookie
+            },
+          ),
       )
       .group('users', app =>
         app
@@ -427,7 +450,7 @@ const app = new Elysia()
             }
             
             .background {
-              background: url(/public/gifs/background.gif) no-repeat center / contain;
+              background: url(/public/gifs/background.gif) no-repeat bottom right / contain;
               width: 100%;
               max-width: 265px;
               height: 100%;
@@ -466,6 +489,18 @@ const app = new Elysia()
             
             a:hover {
               color: coral;
+            }
+            
+            @media screen and (max-width: 576px) {
+              html {
+                align-items: flex-start;
+              }
+              
+              .background {
+                background-position-x: center;
+                left: 50%;
+                transform: translateX(-50%);
+              }
             }
           </style>
         </head>
