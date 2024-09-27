@@ -33,6 +33,7 @@ export const users = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     registeredAt: timestamp('registered_at').notNull().defaultNow(),
+    refreshToken: varchar('refresh_token', { length: 256 }),
   },
   table => ({
     usernameUniqueIndex: uniqueIndex('usernameUniqueIndex').on(

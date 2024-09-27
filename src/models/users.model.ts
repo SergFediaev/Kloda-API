@@ -10,8 +10,9 @@ export const userModel = t.Object({
   likedCards: t.Array(t.String()),
   dislikedCards: t.Array(t.String()),
   registeredAt: t.Date(),
+  refreshToken: t.String(),
 })
 
 export const usersModel = new Elysia().model({
-  usersResponse: t.Array(t.Omit(userModel, ['password'])),
+  usersResponse: t.Array(t.Omit(userModel, ['password', 'refreshToken'])),
 })
