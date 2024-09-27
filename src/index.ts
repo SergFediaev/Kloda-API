@@ -413,10 +413,10 @@ const app = new Elysia()
             }
             
             html {
+              min-height: 100svh;
               display: flex;
               justify-content: center;
               align-items: center;
-              height: 100svh;
             }
         
             body {
