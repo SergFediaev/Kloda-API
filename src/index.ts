@@ -476,6 +476,10 @@ const app = new Elysia()
               box-shadow: 0 0 20px 2px coral;
             }
             
+            .logo {
+              font-weight: normal;
+            }
+            
             ul {
               display: flex;
               flex-direction: column;
@@ -505,9 +509,9 @@ const app = new Elysia()
           </style>
         </head>
         <body>
-          <div class='background'></div>
+          <div class=background></div>
           <main>
-            <h1>Kloda API ♕</h1>
+            <h1>Kloda API <span class=logo>♕</span></h1>
             <ul>
               <li>Backend documentation: <a href=swagger>Swagger</a></li>
               <li>Backend GitHub:<br><a href=https://github.com/SergFediaev/kloda-api>github.com/SergFediaev/kloda-api</a></li>
