@@ -424,7 +424,7 @@ const app = new Elysia()
         <head>
           <title>Kloda API</title>
           <meta name='viewport' content='width=device-width, initial-scale=1' />
-          <link rel='icon' href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".8em" font-size="120">♧</text></svg>' />
+          <link rel='icon' href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".8em" font-size="110">♕</text></svg>' />
           <style>
             * {
               margin: 0;
@@ -507,7 +507,7 @@ const app = new Elysia()
         <body>
           <div class='background'></div>
           <main>
-            <h1>Kloda API ♧</h1>
+            <h1>Kloda API ♕</h1>
             <ul>
               <li>Backend documentation: <a href=swagger>Swagger</a></li>
               <li>Backend GitHub:<br><a href=https://github.com/SergFediaev/kloda-api>github.com/SergFediaev/kloda-api</a></li>
