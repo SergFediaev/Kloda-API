@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   pgTable,
   serial,
@@ -7,7 +7,8 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { lower } from './utils'
+import { lower } from '../utils'
+import { refreshTokens } from './refreshTokens.schema'
 
 export const users = pgTable(
   'users',
@@ -15,7 +16,7 @@ export const users = pgTable(
     id: serial('id').primaryKey(),
     username: varchar('username', { length: 256 }).unique().notNull(),
     email: text('email').unique().notNull(),
-    password: varchar('password', { length: 256 }).notNull(),
+    hashedPassword: varchar('hashed_password', { length: 256 }).notNull(),
     createdCards: varchar('created_cards', { length: 256 })
       .array()
       .notNull()
@@ -33,7 +34,7 @@ export const users = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     registeredAt: timestamp('registered_at').notNull().defaultNow(),
-    refreshToken: varchar('refresh_token', { length: 256 }),
+    lastLoginAt: timestamp('last_login_at').notNull().defaultNow(),
   },
   table => ({
     usernameUniqueIndex: uniqueIndex('usernameUniqueIndex').on(
@@ -42,3 +43,7 @@ export const users = pgTable(
     emailUniqueIndex: uniqueIndex('emailUniqueIndex').on(lower(table.email)),
   }),
 )
+
+export const usersRelations = relations(users, ({ many }) => ({
+  refreshTokens: many(refreshTokens),
+}))

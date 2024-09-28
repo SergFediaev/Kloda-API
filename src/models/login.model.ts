@@ -10,12 +10,12 @@ export const loginModel = new Elysia().model({
     'likedCards',
     'dislikedCards',
     'registeredAt',
-    'refreshToken',
+    'lastLoginAt',
   ]),
   loginResponse: t.Union([
     t.Object({
       accessToken: t.String(),
-      id: t.Number(),
+      userId: t.Number(),
     }),
     t.Object({
       message: t.String(),

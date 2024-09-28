@@ -16,6 +16,7 @@
     "@elysiajs/swagger": "^1.1.1",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
+    "elysia-ip": "^1.0.7",
     "elysia-rate-limit": "^4.1.0",
     "logixlysia": "^3.6.1",
     "postgres": "^3.4.4"

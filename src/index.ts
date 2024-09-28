@@ -7,12 +7,14 @@ import { eq, getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { Elysia } from 'elysia'
+import { ip } from 'elysia-ip'
 import { rateLimit } from 'elysia-rate-limit'
 import logixlysia from 'logixlysia'
 import postgres from 'postgres'
-import { cards } from './db/schemas/cards'
-import { users } from './db/schemas/users'
-import { increment, lower } from './db/schemas/utils'
+import { cards } from './db/schemas/cards.schema'
+import { refreshTokens } from './db/schemas/refreshTokens.schema'
+import { users } from './db/schemas/users.schema'
+import { increment, lower } from './db/utils'
 import { isAuthenticated } from './middlewares/isAuthenticated'
 import { cardsModel } from './models/cards.model'
 import { loginModel } from './models/login.model'
@@ -27,10 +29,16 @@ if (!connectionString) {
   throw Error('Missing DATABASE_URL')
 }
 
-const secret = process.env.JWT_SECRET
+const refreshSecret = process.env.JWT_REFRESH_SECRET
 
-if (!secret) {
-  throw Error('Missing JWT_SECRET')
+if (!refreshSecret) {
+  throw Error('Missing JWT_REFRESH_SECRET')
+}
+
+const accessSecret = process.env.JWT_ACCESS_SECRET
+
+if (!accessSecret) {
+  throw Error('Missing JWT_ACCESS_SECRET')
 }
 
 const migrationClient = postgres(connectionString, { max: 1 })
@@ -45,9 +53,6 @@ const FRONT_URL = 'https://kloda.fediaev.ru'
 
 const invalidCreds = { message: 'Invalid credentials' }
 const unauthorized = { message: 'Unauthorized' }
-
-const ACCESS_TOKEN_EXP = 5 * 60 // 5 minutes
-const REFRESH_TOKEN_EXP = 7 * 86400 // 7 days
 
 const app = new Elysia()
   .use(
@@ -71,6 +76,7 @@ const app = new Elysia()
     }),
   )
   .use(cors())
+  .use(ip())
   .use(
     swagger({
       documentation: {
@@ -136,15 +142,19 @@ const app = new Elysia()
       .group('auth', app =>
         app
           .use(registerModel)
-          .use(jwt({ secret }))
+          .use(jwt({ name: 'jwtRefresh', secret: refreshSecret, exp: '10m' }))
+          .use(jwt({ name: 'jwtAccess', secret: accessSecret, exp: '5m' }))
           .post(
             'register',
             async ({
               body: { username, email, password },
-              jwt,
+              jwtRefresh,
+              jwtAccess,
               cookie,
               set,
+              ip,
             }) => {
+              // ToDo: Return bool instead of user
               const isUsernameExisting = await db
                 .select()
                 .from(users)
@@ -169,37 +179,45 @@ const app = new Elysia()
 
               const hashedPassword = await Bun.password.hash(password)
 
-              const refreshToken = await jwt.sign({
-                sub: crypto.randomUUID(),
-                exp: REFRESH_TOKEN_EXP,
+              const refreshId = crypto.randomUUID()
+
+              const refreshToken = await jwtRefresh.sign({
+                sub: refreshId,
               })
 
               const hashedToken = hashToken(refreshToken)
 
-              const [user] = await db
-                .insert(users)
-                .values({
-                  username,
-                  email,
-                  password: hashedPassword,
-                  refreshToken: hashedToken,
+              const userId = await db.transaction(async tx => {
+                const [{ userId }] = await tx
+                  .insert(users)
+                  .values({
+                    username,
+                    email,
+                    hashedPassword,
+                  })
+                  .returning({ userId: users.id })
+
+                await tx.insert(refreshTokens).values({
+                  id: refreshId,
+                  hashedToken,
+                  ip,
+                  userId,
                 })
-                .returning()
 
-              const id = user.id
-
-              const accessToken = await jwt.sign({
-                sub: String(id),
-                exp: ACCESS_TOKEN_EXP,
+                return userId
               })
 
+              const accessToken = await jwtAccess.sign({
+                sub: String(userId),
+              })
+
+              // ToDo: Secure
               cookie.refreshToken.set({
                 value: refreshToken,
                 httpOnly: true,
-                maxAge: REFRESH_TOKEN_EXP,
               })
 
-              return { accessToken, id }
+              return { accessToken, userId }
             },
             {
               body: 'registerBody',
@@ -210,7 +228,14 @@ const app = new Elysia()
           .use(loginModel)
           .post(
             'login',
-            async ({ body: { email, password }, set, jwt }) => {
+            async ({
+              body: { email, password },
+              set,
+              jwtRefresh,
+              jwtAccess,
+              cookie,
+              ip,
+            }) => {
               const [user] = await db
                 .select()
                 .from(users)
@@ -226,7 +251,7 @@ const app = new Elysia()
 
               const isPasswordValid = await Bun.password.verify(
                 password,
-                user.password,
+                user.hashedPassword,
               )
 
               if (!isPasswordValid) {
@@ -237,71 +262,83 @@ const app = new Elysia()
                 return invalidCreds
               }
 
-              const refreshToken = await jwt.sign({
-                sub: crypto.randomUUID(),
-                exp: REFRESH_TOKEN_EXP,
+              const refreshId = crypto.randomUUID()
+
+              const refreshToken = await jwtRefresh.sign({
+                sub: refreshId,
               })
 
               const hashedToken = hashToken(refreshToken)
 
-              const id = user.id
+              const userId = user.id
 
-              await db
-                .update(users)
-                .set({ refreshToken: hashedToken })
-                .where(eq(users.id, id))
+              await db.transaction(async tx => {
+                await tx
+                  .insert(refreshTokens)
+                  .values({ id: refreshId, hashedToken, ip, userId })
 
-              const accessToken = await jwt.sign({
-                sub: String(id),
-                exp: ACCESS_TOKEN_EXP,
+                await tx
+                  .update(users)
+                  .set({ lastLoginAt: new Date() })
+                  .where(eq(users.id, userId))
               })
 
-              return { accessToken, id }
+              const accessToken = await jwtAccess.sign({
+                sub: String(userId),
+              })
+
+              cookie.refreshToken.set({
+                value: refreshToken,
+                httpOnly: true,
+              })
+
+              return { accessToken, userId }
             },
             {
               body: 'loginBody',
               response: 'loginResponse', // ToDo: Login response
+              cookie: 'registerCookie', // ToDo: Login cookie
             },
           )
           .post(
             'refresh',
-            async ({ cookie, jwt, set }) => {
+            async ({ cookie, jwtRefresh, jwtAccess, set, ip }) => {
               const cookieToken = cookie.refreshToken.value
 
               if (!cookieToken) {
                 set.status = 401
 
-                console.error('Refresh token not found')
+                console.error('Cookie refresh token not found')
 
                 return unauthorized
               }
 
-              const payload = await jwt.verify(cookieToken)
+              const payload = await jwtRefresh.verify(cookieToken)
 
               if (!payload) {
                 set.status = 401
 
-                console.error('Invalid refresh token')
+                console.error('Invalid cookie refresh token')
 
                 return unauthorized
               }
 
-              const id = payload.sub
+              const tokenId = payload.sub
 
-              const [user] = await db
-                .select()
-                .from(users)
-                .where(eq(users.id, Number(id)))
-
-              if (!user) {
+              if (!tokenId) {
                 set.status = 401
 
-                console.error('User not found')
+                console.error('Cookie refresh token ID not found')
 
                 return unauthorized
               }
 
-              if (!user.refreshToken) {
+              const [existingToken] = await db
+                .select()
+                .from(refreshTokens)
+                .where(eq(refreshTokens.id, tokenId))
+
+              if (!existingToken) {
                 set.status = 401
 
                 console.error('User refresh token not found')
@@ -311,7 +348,7 @@ const app = new Elysia()
 
               const hashedCookieToken = hashToken(cookieToken)
 
-              if (hashedCookieToken !== user.refreshToken) {
+              if (hashedCookieToken !== existingToken.hashedToken) {
                 set.status = 401
 
                 console.error("Refresh tokens don't match")
@@ -319,27 +356,45 @@ const app = new Elysia()
                 return unauthorized
               }
 
-              const refreshToken = await jwt.sign({
-                sub: crypto.randomUUID(),
-                exp: REFRESH_TOKEN_EXP,
+              const [user] = await db
+                .select()
+                .from(users)
+                .where(eq(users.id, existingToken.userId))
+
+              if (!user) {
+                set.status = 401
+
+                console.error('User not found')
+
+                return unauthorized
+              }
+
+              await db
+                .delete(refreshTokens)
+                .where(eq(refreshTokens.id, tokenId))
+
+              const refreshId = crypto.randomUUID()
+
+              const refreshToken = await jwtRefresh.sign({
+                sub: refreshId,
               })
 
               const hashedToken = hashToken(refreshToken)
 
-              await db
-                .update(users)
-                .set({ refreshToken: hashedToken })
-                .where(eq(users.id, user.id))
+              await db.insert(refreshTokens).values({
+                id: refreshId,
+                hashedToken,
+                ip,
+                userId: user.id,
+              })
 
-              const accessToken = await jwt.sign({
+              const accessToken = await jwtAccess.sign({
                 sub: String(user.id),
-                exp: ACCESS_TOKEN_EXP,
               })
 
               cookie.refreshToken.set({
                 value: refreshToken,
                 httpOnly: true,
-                maxAge: REFRESH_TOKEN_EXP,
               })
 
               return { accessToken }
@@ -349,7 +404,7 @@ const app = new Elysia()
             },
           )
           .use(isAuthenticated)
-          .get('me', ({ user, set }) => {
+          .get('me', async ({ user, set }) => {
             if (!user) {
               set.status = 401
 
@@ -358,7 +413,12 @@ const app = new Elysia()
               return unauthorized
             }
 
-            const { password, refreshToken, ...restUser } = user
+            await db
+              .update(users)
+              .set({ lastLoginAt: new Date() })
+              .where(eq(users.id, user.id))
+
+            const { hashedPassword, ...restUser } = user
 
             return restUser
           })
@@ -374,9 +434,8 @@ const app = new Elysia()
               }
 
               await db
-                .update(users)
-                .set({ refreshToken: null })
-                .where(eq(users.id, user.id))
+                .delete(refreshTokens)
+                .where(eq(refreshTokens.userId, user.id))
 
               refreshToken.remove()
             },
@@ -391,8 +450,7 @@ const app = new Elysia()
           .get(
             '/',
             () => {
-              const { password, refreshToken, ...restUser } =
-                getTableColumns(users)
+              const { hashedPassword, ...restUser } = getTableColumns(users)
 
               return db.select(restUser).from(users)
             },
@@ -403,8 +461,7 @@ const app = new Elysia()
           .get(
             ':id',
             ({ params: { id } }) => {
-              const { password, refreshToken, ...restUser } =
-                getTableColumns(users)
+              const { hashedPassword, ...restUser } = getTableColumns(users)
 
               return db.select(restUser).from(users).where(eq(users.id, id))
             },

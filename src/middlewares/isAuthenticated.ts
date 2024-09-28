@@ -1,13 +1,13 @@
 import jwt from '@elysiajs/jwt'
 import { eq } from 'drizzle-orm'
 import type { Elysia } from 'elysia'
-import { users } from '../db/schemas/users'
+import { users } from '../db/schemas/users.schema'
 import { db } from '../index'
 
-const secret = process.env.JWT_SECRET
+const accessSecret = process.env.JWT_ACCESS_SECRET
 
-if (!secret) {
-  throw Error('Missing JWT_SECRET')
+if (!accessSecret) {
+  throw Error('Missing JWT_ACCESS_SECRET')
 }
 
 const unauthorized = {
@@ -16,10 +16,11 @@ const unauthorized = {
   data: null,
 }
 
+// ToDo: Refactor JWT
 export const isAuthenticated = (app: Elysia) =>
   app
-    .use(jwt({ secret }))
-    .derive(async ({ jwt, set, request: { headers } }) => {
+    .use(jwt({ name: 'jwtAccess', secret: accessSecret, exp: '5m' }))
+    .derive(async ({ jwtAccess, set, request: { headers } }) => {
       const authorization = headers.get('Authorization')
 
       if (!authorization) {
@@ -40,7 +41,7 @@ export const isAuthenticated = (app: Elysia) =>
         return unauthorized
       }
 
-      const payload = await jwt.verify(token)
+      const payload = await jwtAccess.verify(token)
 
       if (!payload) {
         set.status = 401
@@ -50,12 +51,20 @@ export const isAuthenticated = (app: Elysia) =>
         return unauthorized
       }
 
-      const id = payload.sub
+      const userId = payload.sub
+
+      if (!userId) {
+        set.status = 401
+
+        console.error('User ID not found')
+
+        return unauthorized
+      }
 
       const [user] = await db
         .select()
         .from(users)
-        .where(eq(users.id, Number(id)))
+        .where(eq(users.id, Number(userId)))
 
       if (!user) {
         set.status = 401
