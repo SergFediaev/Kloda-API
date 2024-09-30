@@ -4,7 +4,7 @@ import { Elysia } from 'elysia'
 import { ip } from 'elysia-ip'
 import { authModels } from 'models'
 import { jwtAccessPlugin, jwtRefreshPlugin } from 'plugins'
-import { hashToken } from 'utils'
+import { getRefreshConfig, hashToken, parseUserAgent } from 'utils'
 
 export const registerRoute = new Elysia()
   .use(authModels)
@@ -20,6 +20,7 @@ export const registerRoute = new Elysia()
       cookie,
       set,
       ip,
+      request: { headers },
     }) => {
       // ToDo: Return bool instead of user
       const isUsernameExisting = await db
@@ -54,6 +55,8 @@ export const registerRoute = new Elysia()
 
       const hashedToken = hashToken(refreshToken)
 
+      const { expiresAt, refreshConfig } = getRefreshConfig()
+
       const userId = await db.transaction(async tx => {
         const [{ userId }] = await tx
           .insert(users)
@@ -64,11 +67,15 @@ export const registerRoute = new Elysia()
           })
           .returning({ userId: users.id })
 
+        const userAgent = parseUserAgent(headers)
+
         await tx.insert(refreshTokens).values({
           id: refreshId,
           hashedToken,
           ip,
           userId,
+          userAgent,
+          expiresAt,
         })
 
         return userId
@@ -78,10 +85,9 @@ export const registerRoute = new Elysia()
         sub: String(userId),
       })
 
-      // ToDo: Secure
       cookie.refreshToken.set({
         value: refreshToken,
-        httpOnly: true,
+        ...refreshConfig,
       })
 
       return { accessToken, userId }

@@ -4,6 +4,7 @@ import {
   integer,
   pgTable,
   serial,
+  text,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -17,7 +18,9 @@ export const refreshTokens = pgTable('refresh_tokens', {
   ip: varchar('ip', { length: 256 }).notNull(),
   isRevoked: boolean('is_revoked').default(false).notNull(),
   userId: integer('user_id').notNull(),
+  userAgent: text('user_agent').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
 })
 
 // ToDo: Relations

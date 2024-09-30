@@ -4,7 +4,7 @@ import { Elysia } from 'elysia'
 import { ip } from 'elysia-ip'
 import { authModels } from 'models'
 import { jwtAccessPlugin, jwtRefreshPlugin } from 'plugins'
-import { hashToken } from 'utils'
+import { getRefreshConfig, hashToken, parseUserAgent } from 'utils'
 
 const invalidCreds = { message: 'Invalid credentials' }
 
@@ -22,6 +22,7 @@ export const loginRoute = new Elysia()
       jwtAccess,
       cookie,
       ip,
+      request: { headers },
     }) => {
       const [user] = await db
         .select()
@@ -59,10 +60,19 @@ export const loginRoute = new Elysia()
 
       const userId = user.id
 
+      const { expiresAt, refreshConfig } = getRefreshConfig()
+
       await db.transaction(async tx => {
-        await tx
-          .insert(refreshTokens)
-          .values({ id: refreshId, hashedToken, ip, userId })
+        const userAgent = parseUserAgent(headers)
+
+        await tx.insert(refreshTokens).values({
+          id: refreshId,
+          hashedToken,
+          ip,
+          userId,
+          userAgent,
+          expiresAt,
+        })
 
         await tx
           .update(users)
@@ -76,7 +86,7 @@ export const loginRoute = new Elysia()
 
       cookie.refreshToken.set({
         value: refreshToken,
-        httpOnly: true,
+        ...refreshConfig,
       })
 
       return { accessToken, userId }

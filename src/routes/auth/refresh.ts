@@ -4,7 +4,7 @@ import { Elysia } from 'elysia'
 import { ip } from 'elysia-ip'
 import { authModels } from 'models'
 import { jwtAccessPlugin, jwtRefreshPlugin } from 'plugins'
-import { hashToken } from 'utils'
+import { getRefreshConfig, hashToken, parseUserAgent } from 'utils'
 
 const unauthorized = { message: 'Unauthorized' }
 
@@ -15,7 +15,14 @@ export const refreshRoute = new Elysia()
   .use(ip())
   .post(
     'refresh',
-    async ({ cookie, jwtRefresh, jwtAccess, set, ip }) => {
+    async ({
+      cookie,
+      jwtRefresh,
+      jwtAccess,
+      set,
+      ip,
+      request: { headers },
+    }) => {
       const cookieToken = cookie.refreshToken.value
 
       if (!cookieToken) {
@@ -92,11 +99,17 @@ export const refreshRoute = new Elysia()
 
       const hashedToken = hashToken(refreshToken)
 
+      const userAgent = parseUserAgent(headers)
+
+      const { expiresAt, refreshConfig } = getRefreshConfig()
+
       await db.insert(refreshTokens).values({
         id: refreshId,
         hashedToken,
         ip,
         userId: user.id,
+        userAgent,
+        expiresAt,
       })
 
       const accessToken = await jwtAccess.sign({
@@ -105,7 +118,7 @@ export const refreshRoute = new Elysia()
 
       cookie.refreshToken.set({
         value: refreshToken,
-        httpOnly: true,
+        ...refreshConfig,
       })
 
       return { accessToken }

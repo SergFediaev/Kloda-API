@@ -25,6 +25,6 @@ export const jwtAccessPlugin = new Elysia().use(
   jwt({
     name: 'jwtAccess',
     secret: accessSecret,
-    exp: '5m',
+    exp: '3m',
   }),
 )
