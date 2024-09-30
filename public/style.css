@@ -22,8 +22,7 @@ body {
 }
 
 .background {
-  background: url(/public/pages/root/background.gif) no-repeat bottom right /
-    contain;
+  background: url(background.gif) no-repeat bottom right / contain;
   width: 100%;
   max-width: 265px;
   height: 100%;

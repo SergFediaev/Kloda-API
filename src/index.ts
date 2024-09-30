@@ -1,15 +1,14 @@
 import cors from '@elysiajs/cors'
-import staticPlugin from '@elysiajs/static'
 import { Elysia } from 'elysia'
-import { docsPlugin, limitPlugin, logPlugin } from 'plugins'
+import { docsPlugin, limitPlugin, logPlugin, staticPlugin } from 'plugins'
 import { authRoute, cardsRoute, rootRoute, usersRoute } from 'routes'
 
 const app = new Elysia()
   .use(cors())
-  .use(staticPlugin())
   .use(limitPlugin)
   .use(logPlugin)
   .use(docsPlugin)
+  .use(staticPlugin)
   .onError(({ error, code }) => {
     console.error(error)
 
