@@ -6,7 +6,7 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { cards } from './cards.schema'
+import { cards } from './cards'
 
 export const comments = pgTable('comments', {
   id: serial('id').primaryKey(),

@@ -1,3 +1,4 @@
+import { lower } from 'db/utils'
 import { relations, sql } from 'drizzle-orm'
 import {
   pgTable,
@@ -7,8 +8,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { lower } from '../utils'
-import { refreshTokens } from './refreshTokens.schema'
+import { refreshTokens } from './refreshTokens'
 
 export const users = pgTable(
   'users',

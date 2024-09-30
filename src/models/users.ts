@@ -13,6 +13,8 @@ export const userModel = t.Object({
   lastLoginAt: t.Date(),
 })
 
+export const userResponseModel = t.Omit(userModel, ['password'])
+
 export const usersModel = new Elysia().model({
-  usersResponse: t.Array(t.Omit(userModel, ['password'])),
+  users: t.Array(userResponseModel),
 })

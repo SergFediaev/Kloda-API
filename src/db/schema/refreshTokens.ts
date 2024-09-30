@@ -7,7 +7,7 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { users } from './users.schema'
+import { users } from './users'
 
 // ToDo: Revoke
 export const refreshTokens = pgTable('refresh_tokens', {

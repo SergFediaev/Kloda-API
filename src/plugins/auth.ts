@@ -1,14 +1,7 @@
-import jwt from '@elysiajs/jwt'
+import { db, users } from 'db'
 import { eq } from 'drizzle-orm'
 import type { Elysia } from 'elysia'
-import { users } from '../db/schemas/users.schema'
-import { db } from '../index'
-
-const accessSecret = process.env.JWT_ACCESS_SECRET
-
-if (!accessSecret) {
-  throw Error('Missing JWT_ACCESS_SECRET')
-}
+import { jwtAccessPlugin } from './jwt'
 
 const unauthorized = {
   success: false,
@@ -16,10 +9,9 @@ const unauthorized = {
   data: null,
 }
 
-// ToDo: Refactor JWT
-export const isAuthenticated = (app: Elysia) =>
+export const authPlugin = (app: Elysia) =>
   app
-    .use(jwt({ name: 'jwtAccess', secret: accessSecret, exp: '5m' }))
+    .use(jwtAccessPlugin)
     .derive(async ({ jwtAccess, set, request: { headers } }) => {
       const authorization = headers.get('Authorization')
 

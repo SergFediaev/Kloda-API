@@ -12,13 +12,13 @@ const cardModel = t.Object({
   updatedAt: t.Date(),
 })
 
-export const cardsModel = new Elysia().model({
-  cardBody: t.Omit(cardModel, [
+export const cardsModels = new Elysia().model({
+  cards: t.Array(cardModel),
+  card: t.Omit(cardModel, [
     'id',
     'likes',
     'dislikes',
     'createdAt',
     'updatedAt',
   ]),
-  cardsResponse: t.Array(cardModel),
 })
