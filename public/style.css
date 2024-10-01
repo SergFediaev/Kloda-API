@@ -67,6 +67,11 @@ a:hover {
   color: coral;
 }
 
+::selection {
+  background-color: orange;
+  color: black;
+}
+
 @media screen and (max-width: 576px) {
   html {
     align-items: flex-start;

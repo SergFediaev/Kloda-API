@@ -7,14 +7,19 @@ const cardModel = t.Object({
   categories: t.Array(t.String()),
   likes: t.Number(),
   dislikes: t.Number(),
-  authorId: t.String(),
+  authorId: t.Number(),
   createdAt: t.Date(),
   updatedAt: t.Date(),
 })
 
+// ToDo: Refactor cards models
 export const cardsModels = new Elysia().model({
-  cards: t.Array(cardModel),
-  card: t.Omit(cardModel, [
+  cards: t.Object({
+    cards: t.Array(cardModel),
+    total: t.Numeric(),
+  }),
+  card: t.Array(cardModel),
+  create: t.Omit(cardModel, [
     'id',
     'likes',
     'dislikes',

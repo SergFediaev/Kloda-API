@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
+import { cards } from './cards'
 import { refreshTokens } from './refreshTokens'
 
 export const users = pgTable(
@@ -46,4 +47,5 @@ export const users = pgTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
+  cards: many(cards),
 }))

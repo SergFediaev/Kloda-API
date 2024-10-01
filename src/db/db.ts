@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+import * as schema from './schema'
 
 const connectionString = process.env.DATABASE_URL
 
@@ -10,7 +11,7 @@ if (!connectionString) {
 
 const queryClient = postgres(connectionString)
 
-export const db = drizzle(queryClient)
+export const db = drizzle(queryClient, { schema })
 
 const migrationClient = postgres(connectionString, { max: 1 })
 
