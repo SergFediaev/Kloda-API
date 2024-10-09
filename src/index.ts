@@ -4,7 +4,13 @@ import { Elysia } from 'elysia'
 import { docsPlugin, limitPlugin, logPlugin, staticPlugin } from 'plugins'
 import { authRoute, cardsRoute, rootRoute, usersRoute } from 'routes'
 
-const app = new Elysia()
+const port = process.env.PORT
+
+if (!port) {
+  throw Error('Missing PORT')
+}
+
+new Elysia()
   .use(cors())
   .use(serverTiming())
   .use(limitPlugin)
@@ -22,6 +28,6 @@ const app = new Elysia()
   .use(authRoute)
   .use(cardsRoute)
   .use(usersRoute)
-  .listen(3_000)
-
-console.log(`View documentation at "${app.server?.url}swagger" in your browser`)
+  .listen(port, ({ url }) =>
+    console.log(`View documentation at "${url}swagger" in your browser`),
+  )
