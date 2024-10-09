@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 
+// ToDo: Refactor format: 'email', password min/maxLength
 export const userModel = t.Object({
   id: t.Number(),
   username: t.String(),

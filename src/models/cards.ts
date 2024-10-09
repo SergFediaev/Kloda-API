@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 
-const cardModel = t.Object({
+export const cardModel = t.Object({
   id: t.Number(),
   title: t.String(),
   content: t.String(),
@@ -16,7 +16,8 @@ const cardModel = t.Object({
 export const cardsModels = new Elysia().model({
   cards: t.Object({
     cards: t.Array(cardModel),
-    total: t.Numeric(),
+    totalCards: t.Numeric(),
+    totalPages: t.Numeric(),
   }),
   card: t.Array(cardModel),
   create: t.Omit(cardModel, [

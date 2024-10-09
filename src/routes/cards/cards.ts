@@ -1,7 +1,7 @@
 import { cards, db } from 'db'
-import { asc, count, eq, ilike, or } from 'drizzle-orm'
+import { asc, count, desc, eq, ilike, or } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { cardsModels, idModel } from 'models'
+import { cardModel, cardsModels, idModel } from 'models'
 import { dislikeRoute } from './dislike'
 import { likeRoute } from './like'
 
@@ -13,12 +13,14 @@ export const cardsRoute = new Elysia({
   .use(dislikeRoute)
   .get(
     '',
-    ({ query: { search, page, limit } }) =>
+    ({ query: { search, page, limit, order, sort } }) =>
       db.transaction(async tx => {
+        const orderBy = order === 'asc' ? asc : desc
+
         const foundCards = await tx.query.cards.findMany({
           limit,
           offset: (page - 1) * limit,
-          orderBy: asc(cards.id),
+          orderBy: orderBy(cards[sort]),
           where: search
             ? or(
                 ilike(cards.title, `%${search}%`),
@@ -27,11 +29,16 @@ export const cardsRoute = new Elysia({
             : undefined,
         })
 
-        const [{ total }] = await tx.select({ total: count() }).from(cards)
+        const [{ totalCards }] = await tx
+          .select({ totalCards: count() })
+          .from(cards)
+
+        const totalPages = Math.ceil(totalCards / limit)
 
         return {
           cards: foundCards,
-          total,
+          totalCards,
+          totalPages,
         }
       }),
     {
@@ -40,6 +47,10 @@ export const cardsRoute = new Elysia({
         search: t.String({ default: '' }),
         page: t.Numeric({ default: 1 }),
         limit: t.Numeric({ default: 10 }),
+        order: t.Union([t.Literal('asc'), t.Literal('desc')], {
+          default: 'desc',
+        }),
+        sort: t.KeyOf(cardModel, { default: 'createdAt' }),
       }), // ToDo: Refactor query model
     },
   )
