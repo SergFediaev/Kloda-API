@@ -16,15 +16,16 @@ export const cardsRoute = new Elysia({
     ({ query: { search, page, limit, order, sort } }) =>
       db.transaction(async tx => {
         const orderBy = order === 'asc' ? asc : desc
+        const decodedSearch = decodeURIComponent(search)
 
         const foundCards = await tx.query.cards.findMany({
           limit,
           offset: (page - 1) * limit,
           orderBy: orderBy(cards[sort]),
-          where: search
+          where: decodedSearch
             ? or(
-                ilike(cards.title, `%${search}%`),
-                ilike(cards.content, `%${search}%`),
+                ilike(cards.title, `%${decodedSearch}%`),
+                ilike(cards.content, `%${decodedSearch}%`),
               )
             : undefined,
         })
