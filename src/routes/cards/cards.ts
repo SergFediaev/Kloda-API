@@ -17,22 +17,24 @@ export const cardsRoute = new Elysia({
       db.transaction(async tx => {
         const orderBy = order === 'asc' ? asc : desc
         const decodedSearch = decodeURIComponent(search)
+        const where = decodedSearch
+          ? or(
+              ilike(cards.title, `%${decodedSearch}%`),
+              ilike(cards.content, `%${decodedSearch}%`),
+            )
+          : undefined
 
         const foundCards = await tx.query.cards.findMany({
           limit,
           offset: (page - 1) * limit,
           orderBy: orderBy(cards[sort]),
-          where: decodedSearch
-            ? or(
-                ilike(cards.title, `%${decodedSearch}%`),
-                ilike(cards.content, `%${decodedSearch}%`),
-              )
-            : undefined,
+          where,
         })
 
         const [{ totalCards }] = await tx
           .select({ totalCards: count() })
           .from(cards)
+          .where(where)
 
         const totalPages = Math.ceil(totalCards / limit)
 
