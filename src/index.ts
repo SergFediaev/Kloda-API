@@ -2,7 +2,13 @@ import cors from '@elysiajs/cors'
 import serverTiming from '@elysiajs/server-timing'
 import { Elysia } from 'elysia'
 import { docsPlugin, limitPlugin, logPlugin, staticPlugin } from 'plugins'
-import { authRoute, cardsRoute, rootRoute, usersRoute } from 'routes'
+import {
+  authRoute,
+  cardsRoute,
+  categoriesRoute,
+  rootRoute,
+  usersRoute,
+} from 'routes'
 
 const port = process.env.PORT
 
@@ -28,6 +34,7 @@ new Elysia()
   .use(authRoute)
   .use(cardsRoute)
   .use(usersRoute)
+  .use(categoriesRoute)
   .listen(port, ({ url }) =>
     console.log(`View documentation at "${url}swagger" in your browser`),
   )

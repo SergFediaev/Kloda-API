@@ -120,6 +120,13 @@
       "when": 1727726868127,
       "tag": "0016_shocking_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1729098595908,
+      "tag": "0017_shocking_zaladane",
+      "breakpoints": true
     }
   ]
 }

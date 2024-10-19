@@ -19,7 +19,6 @@ export const cardsModels = new Elysia().model({
     totalCards: t.Numeric(),
     totalPages: t.Numeric(),
   }),
-  card: t.Array(cardModel),
   create: t.Omit(cardModel, [
     'id',
     'likes',

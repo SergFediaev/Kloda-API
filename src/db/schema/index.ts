@@ -1,4 +1,6 @@
 export * from './cards'
+export * from './cardsToCategories'
+export * from './categories'
 export * from './comments'
 export * from './refreshTokens'
 export * from './users'

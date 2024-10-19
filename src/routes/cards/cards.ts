@@ -1,5 +1,22 @@
-import { cards, db } from 'db'
-import { asc, count, desc, eq, ilike, or } from 'drizzle-orm'
+import {
+  cards,
+  cardsToCategories,
+  categories,
+  db,
+  getCardWithCategories,
+} from 'db'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { cardModel, cardsModels, idModel } from 'models'
 import { dislikeRoute } from './dislike'
@@ -13,28 +30,52 @@ export const cardsRoute = new Elysia({
   .use(dislikeRoute)
   .get(
     '',
-    ({ query: { search, page, limit, order, sort } }) =>
+    ({
+      query: { search, page, limit, order, sort, categories: queryCategories },
+    }) =>
       db.transaction(async tx => {
         const orderBy = order === 'asc' ? asc : desc
         const decodedSearch = decodeURIComponent(search)
-        const where = decodedSearch
+        const decodedCategories = queryCategories.map(category =>
+          decodeURIComponent(category),
+        ) // ToDo: Normalize all filters from query
+
+        const searchFilter = decodedSearch
           ? or(
               ilike(cards.title, `%${decodedSearch}%`),
               ilike(cards.content, `%${decodedSearch}%`),
             )
           : undefined
 
-        const foundCards = await tx.query.cards.findMany({
-          limit,
-          offset: (page - 1) * limit,
-          orderBy: orderBy(cards[sort]),
-          where,
-        })
+        const categoriesFilter = decodedCategories.length
+          ? inArray(categories.name, decodedCategories)
+          : undefined
+
+        const filters =
+          searchFilter && categoriesFilter
+            ? and(searchFilter, categoriesFilter)
+            : searchFilter || categoriesFilter
+
+        const foundCards = await tx
+          .select({
+            ...getTableColumns(cards),
+            categories: sql<string[]>`array_agg(${categories.displayName})`,
+          })
+          .from(cards)
+          .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
+          .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
+          .where(filters)
+          .groupBy(cards.id)
+          .orderBy(orderBy(cards[sort]))
+          .limit(limit)
+          .offset((page - 1) * limit)
 
         const [{ totalCards }] = await tx
           .select({ totalCards: count() })
           .from(cards)
-          .where(where)
+          .where(filters)
+          .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
+          .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
 
         const totalPages = Math.ceil(totalCards / limit)
 
@@ -53,29 +94,66 @@ export const cardsRoute = new Elysia({
         order: t.Union([t.Literal('asc'), t.Literal('desc')], {
           default: 'desc',
         }),
-        sort: t.KeyOf(cardModel, { default: 'createdAt' }),
+        sort: t.KeyOf(t.Omit(cardModel, ['categories']), {
+          default: 'createdAt',
+        }),
+        categories: t.Array(t.String(), { default: [] }),
       }), // ToDo: Refactor query model
     },
   )
   .get(
     ':id',
     async ({ params: { id } }) => {
-      const card = await db.query.cards.findFirst({
-        where: eq(cards.id, id),
-      })
-
-      if (card) {
-        return [card]
-      }
-
-      return []
+      const [card] = await getCardWithCategories(db, id)
+      return card
     },
     {
       params: idModel,
-      response: 'card',
+      response: cardModel,
     },
   )
-  .post('', ({ body }) => db.insert(cards).values(body).returning(), {
-    body: 'create',
-    response: 'card',
-  })
+  .post(
+    '',
+    ({ body: { categories: bodyCategories, ...restBody } }) =>
+      db.transaction(async tx => {
+        const [{ cardId }] = await tx
+          .insert(cards)
+          .values(restBody)
+          .returning({ cardId: cards.id })
+
+        const normalizedCategories = bodyCategories.map(displayName => ({
+          name: displayName.toLowerCase(),
+          displayName,
+        }))
+
+        await tx
+          .insert(categories)
+          .values(normalizedCategories)
+          .onConflictDoNothing()
+
+        const existingCategories = await tx.query.categories.findMany({
+          where: inArray(
+            categories.name,
+            normalizedCategories.map(({ name }) => name),
+          ),
+          columns: {
+            id: true,
+          },
+        })
+
+        const cardCategories = existingCategories.map(({ id: categoryId }) => ({
+          cardId,
+          categoryId,
+        }))
+
+        await tx.insert(cardsToCategories).values(cardCategories)
+
+        const [createdCard] = await getCardWithCategories(tx, cardId)
+
+        return createdCard
+      }),
+    {
+      body: 'create',
+      response: cardModel,
+    },
+  )
