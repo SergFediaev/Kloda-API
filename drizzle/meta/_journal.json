@@ -127,6 +127,20 @@
       "when": 1729098595908,
       "tag": "0017_shocking_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1729787585788,
+      "tag": "0018_flippant_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1729792690931,
+      "tag": "0019_unique_secret_warriors",
+      "breakpoints": true
     }
   ]
 }

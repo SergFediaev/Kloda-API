@@ -3,14 +3,19 @@ import {
   cardsToCategories,
   categories,
   db,
+  dislikedCards,
+  favoriteCards,
   getCardWithCategories,
+  likedCards,
 } from 'db'
 import {
+  type SQL,
   and,
   asc,
   count,
   desc,
   eq,
+  exists,
   getTableColumns,
   ilike,
   inArray,
@@ -22,6 +27,12 @@ import { cardModel, cardsModels, idModel } from 'models'
 import { dislikeRoute } from './dislike'
 import { likeRoute } from './like'
 
+const ACTION_TABLES = {
+  favorite: favoriteCards,
+  liked: likedCards,
+  disliked: dislikedCards,
+} as const
+
 export const cardsRoute = new Elysia({
   prefix: 'v1/cards',
 })
@@ -30,61 +41,93 @@ export const cardsRoute = new Elysia({
   .use(dislikeRoute)
   .get(
     '',
-    ({
-      query: { search, page, limit, order, sort, categories: queryCategories },
-    }) =>
-      db.transaction(async tx => {
-        const orderBy = order === 'asc' ? asc : desc
-        const decodedSearch = decodeURIComponent(search)
-        const decodedCategories = queryCategories.map(category =>
-          decodeURIComponent(category),
-        ) // ToDo: Normalize all filters from query
+    async ({
+      query: {
+        search,
+        page,
+        limit,
+        order,
+        sort,
+        categories: queryCategories,
+        user,
+        action,
+      },
+    }) => {
+      const orderBy = order === 'asc' ? asc : desc
+      const decodedSearch = decodeURIComponent(search)
+      const decodedCategories = queryCategories.map(category =>
+        decodeURIComponent(category),
+      ) // ToDo: Normalize all filters from query
 
-        const searchFilter = decodedSearch
-          ? or(
-              ilike(cards.title, `%${decodedSearch}%`),
-              ilike(cards.content, `%${decodedSearch}%`),
-            )
-          : undefined
+      const searchFilter = decodedSearch
+        ? or(
+            ilike(cards.title, `%${decodedSearch}%`),
+            ilike(cards.content, `%${decodedSearch}%`),
+          )
+        : undefined
 
-        const categoriesFilter = decodedCategories.length
-          ? inArray(categories.name, decodedCategories)
-          : undefined
+      const categoriesFilter = decodedCategories.length
+        ? inArray(categories.name, decodedCategories)
+        : undefined
 
-        const filters =
-          searchFilter && categoriesFilter
-            ? and(searchFilter, categoriesFilter)
-            : searchFilter || categoriesFilter
+      const filters: SQL[] = []
 
-        const foundCards = await tx
-          .select({
-            ...getTableColumns(cards),
-            categories: sql<string[]>`array_agg(${categories.displayName})`,
-          })
-          .from(cards)
-          .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
-          .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
-          .where(filters)
-          .groupBy(cards.id)
-          .orderBy(orderBy(cards[sort]))
-          .limit(limit)
-          .offset((page - 1) * limit)
+      if (searchFilter) filters.push(searchFilter)
 
-        const [{ totalCards }] = await tx
-          .select({ totalCards: count() })
-          .from(cards)
-          .where(filters)
-          .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
-          .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
+      if (categoriesFilter) filters.push(categoriesFilter)
 
-        const totalPages = Math.ceil(totalCards / limit)
+      if (user && action) {
+        if (action === 'created') filters.push(eq(cards.authorId, user))
+        else if (ACTION_TABLES[action]) {
+          const table = ACTION_TABLES[action]
 
-        return {
-          cards: foundCards,
-          totalCards,
-          totalPages,
+          filters.push(
+            exists(
+              db
+                .select()
+                .from(table)
+                .where(and(eq(table.userId, user), eq(table.cardId, cards.id))),
+            ),
+          )
         }
-      }),
+      }
+
+      const filter = filters.length ? and(...filters) : undefined
+
+      const findCards = db
+        .select({
+          ...getTableColumns(cards),
+          categories: sql<string[]>`array_agg(${categories.displayName})`,
+        })
+        .from(cards)
+        .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
+        .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
+        .groupBy(cards.id)
+        .orderBy(orderBy(cards[sort]))
+        .limit(limit)
+        .offset((page - 1) * limit)
+
+      const countCards = db
+        .select({ totalCards: count() })
+        .from(cards)
+        .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
+        .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
+
+      if (filter) {
+        findCards.where(filter)
+        countCards.where(filter)
+      }
+
+      const foundCards = await findCards
+      const [{ totalCards }] = await countCards
+      const totalPages = Math.ceil(totalCards / limit)
+
+      return {
+        cards: foundCards,
+        totalCards,
+        totalPages,
+      }
+    },
     {
       response: 'cards',
       query: t.Object({
@@ -98,6 +141,15 @@ export const cardsRoute = new Elysia({
           default: 'createdAt',
         }),
         categories: t.Array(t.String(), { default: [] }),
+        user: t.Optional(t.Numeric()),
+        action: t.Optional(
+          t.Union([
+            t.Literal('created'),
+            t.Literal('favorite'),
+            t.Literal('liked'),
+            t.Literal('disliked'),
+          ]),
+        ),
       }), // ToDo: Refactor query model
     },
   )
