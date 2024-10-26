@@ -1,4 +1,4 @@
-import { db, users } from 'db'
+import { db, getUsersWithCardsCount, users } from 'db'
 import { eq } from 'drizzle-orm'
 import type { Elysia } from 'elysia'
 import { jwtAccessPlugin } from './jwt'
@@ -53,10 +53,9 @@ export const authPlugin = (app: Elysia) =>
         return unauthorized
       }
 
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, Number(userId)))
+      const [user] = await getUsersWithCardsCount(db).where(
+        eq(users.id, Number(userId)),
+      )
 
       if (!user) {
         set.status = 401

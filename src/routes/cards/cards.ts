@@ -5,22 +5,19 @@ import {
   db,
   dislikedCards,
   favoriteCards,
-  getCardWithCategories,
+  getCardsWithCategories,
+  getOrder,
   likedCards,
 } from 'db'
 import {
   type SQL,
   and,
-  asc,
   count,
-  desc,
   eq,
   exists,
-  getTableColumns,
   ilike,
   inArray,
   or,
-  sql,
 } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { cardModel, cardsModels, idModel } from 'models'
@@ -53,7 +50,7 @@ export const cardsRoute = new Elysia({
         action,
       },
     }) => {
-      const orderBy = order === 'asc' ? asc : desc
+      const orderBy = getOrder(order)
       const decodedSearch = decodeURIComponent(search)
       const decodedCategories = queryCategories.map(category =>
         decodeURIComponent(category),
@@ -94,15 +91,7 @@ export const cardsRoute = new Elysia({
 
       const filter = filters.length ? and(...filters) : undefined
 
-      const findCards = db
-        .select({
-          ...getTableColumns(cards),
-          categories: sql<string[]>`array_agg(${categories.displayName})`,
-        })
-        .from(cards)
-        .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
-        .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
-        .groupBy(cards.id)
+      const findCards = getCardsWithCategories(db)
         .orderBy(orderBy(cards[sort]))
         .limit(limit)
         .offset((page - 1) * limit)
@@ -156,7 +145,8 @@ export const cardsRoute = new Elysia({
   .get(
     ':id',
     async ({ params: { id } }) => {
-      const [card] = await getCardWithCategories(db, id)
+      const [card] = await getCardsWithCategories(db).where(eq(cards.id, id))
+
       return card
     },
     {
@@ -200,7 +190,9 @@ export const cardsRoute = new Elysia({
 
         await tx.insert(cardsToCategories).values(cardCategories)
 
-        const [createdCard] = await getCardWithCategories(tx, cardId)
+        const [createdCard] = await getCardsWithCategories(tx).where(
+          eq(cards.id, cardId),
+        )
 
         return createdCard
       }),

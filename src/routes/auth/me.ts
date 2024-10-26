@@ -23,9 +23,7 @@ export const meRoute = new Elysia()
         .set({ lastLoginAt: new Date() })
         .where(eq(users.id, user.id))
 
-      const { hashedPassword, ...restUser } = user
-
-      return restUser
+      return user
     },
     {
       response: 'me',

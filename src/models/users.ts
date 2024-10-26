@@ -6,10 +6,10 @@ export const userModel = t.Object({
   username: t.String(),
   email: t.String(),
   password: t.String(),
-  createdCards: t.Array(t.String()),
-  favoriteCards: t.Array(t.String()),
-  likedCards: t.Array(t.String()),
-  dislikedCards: t.Array(t.String()),
+  createdCardsCount: t.Number(),
+  favoriteCardsCount: t.Number(),
+  likedCardsCount: t.Number(),
+  dislikedCardsCount: t.Number(),
   registeredAt: t.Date(),
   lastLoginAt: t.Date(),
 })
@@ -17,5 +17,9 @@ export const userModel = t.Object({
 export const userResponseModel = t.Omit(userModel, ['password'])
 
 export const usersModel = new Elysia().model({
-  users: t.Array(userResponseModel),
+  users: t.Object({
+    users: t.Array(userResponseModel),
+    totalUsers: t.Numeric(),
+    totalPages: t.Numeric(),
+  }),
 })
