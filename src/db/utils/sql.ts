@@ -11,6 +11,7 @@ import {
 import {
   type AnyColumn,
   type SQL,
+  and,
   asc,
   desc,
   eq,
@@ -18,6 +19,11 @@ import {
   sql,
 } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+
+type CardsStatusTable =
+  | typeof favoriteCards
+  | typeof likedCards
+  | typeof dislikedCards
 
 export const lower = (value: AnyPgColumn): SQL => sql`lower(${value})`
 
@@ -38,16 +44,49 @@ export const getUserCardsCount = () =>
     dislikedCardsCount: sql<number>`count(${dislikedCards.userId})::int`,
   }) as const
 
-export const getCardsWithCategories = (database: Database) =>
-  database
+const getCardStatus = (table: CardsStatusTable, userId?: number) =>
+  userId
+    ? sql<boolean>`coalesce(bool_or(${table.userId} = ${userId}), false)`
+    : sql<boolean>`false`
+
+export const getCards = (database: Database, userId?: number) => {
+  const cardsWithCategories = database
     .select({
       ...getTableColumns(cards),
       categories: sql<string[]>`array_agg(${categories.displayName})`,
+      isFavorite: getCardStatus(favoriteCards, userId),
+      isLiked: getCardStatus(likedCards, userId),
+      isDisliked: getCardStatus(dislikedCards, userId),
     })
     .from(cards)
     .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
     .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
     .groupBy(cards.id)
+
+  if (userId) {
+    cardsWithCategories
+      .leftJoin(
+        favoriteCards,
+        and(
+          eq(favoriteCards.userId, userId),
+          eq(favoriteCards.cardId, cards.id),
+        ),
+      )
+      .leftJoin(
+        likedCards,
+        and(eq(likedCards.userId, userId), eq(likedCards.cardId, cards.id)),
+      )
+      .leftJoin(
+        dislikedCards,
+        and(
+          eq(dislikedCards.userId, userId),
+          eq(dislikedCards.cardId, cards.id),
+        ),
+      )
+  }
+
+  return cardsWithCategories
+}
 
 export const getUsersWithCardsCount = (database: Database) => {
   const { hashedPassword, ...restUser } = getTableColumns(users)

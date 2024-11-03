@@ -2,11 +2,11 @@ import { db, users } from 'db'
 import { eq } from 'drizzle-orm'
 import { Elysia } from 'elysia'
 import { authModels } from 'models'
-import { authPlugin } from 'plugins'
+import { authorizePlugin } from 'plugins'
 
 export const meRoute = new Elysia()
   .use(authModels)
-  .use(authPlugin)
+  .use(authorizePlugin)
   .get(
     'me',
     async ({ user, set }) => {

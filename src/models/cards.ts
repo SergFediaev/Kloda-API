@@ -10,6 +10,9 @@ export const cardModel = t.Object({
   authorId: t.Number(),
   createdAt: t.Date(),
   updatedAt: t.Date(),
+  isFavorite: t.Boolean(),
+  isLiked: t.Boolean(),
+  isDisliked: t.Boolean(),
 })
 
 // ToDo: Refactor cards models

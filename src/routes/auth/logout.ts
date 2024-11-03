@@ -2,11 +2,11 @@ import { db, refreshTokens, users } from 'db'
 import { eq } from 'drizzle-orm'
 import { Elysia } from 'elysia'
 import { authModels } from 'models'
-import { authPlugin } from 'plugins'
+import { authorizePlugin } from 'plugins'
 
 export const logoutRoute = new Elysia()
   .use(authModels)
-  .use(authPlugin)
+  .use(authorizePlugin)
   .post(
     'logout',
     async ({ cookie: { refreshToken }, user, set }) => {

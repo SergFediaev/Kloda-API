@@ -9,7 +9,7 @@ const unauthorized = {
   data: null,
 }
 
-export const authPlugin = (app: Elysia) =>
+export const authorizePlugin = (app: Elysia) =>
   app
     .use(jwtAccessPlugin)
     .derive(async ({ jwtAccess, set, request: { headers } }) => {

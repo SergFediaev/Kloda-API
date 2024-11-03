@@ -5,7 +5,7 @@ import {
   db,
   dislikedCards,
   favoriteCards,
-  getCardsWithCategories,
+  getCards,
   getOrder,
   likedCards,
 } from 'db'
@@ -21,6 +21,7 @@ import {
 } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { cardModel, cardsModels, idModel } from 'models'
+import { authenticatePlugin } from 'plugins'
 import { dislikeRoute } from './dislike'
 import { likeRoute } from './like'
 
@@ -34,6 +35,7 @@ export const cardsRoute = new Elysia({
   prefix: 'v1/cards',
 })
   .use(cardsModels)
+  .use(authenticatePlugin)
   .use(likeRoute)
   .use(dislikeRoute)
   .get(
@@ -46,9 +48,10 @@ export const cardsRoute = new Elysia({
         order,
         sort,
         categories: queryCategories,
-        user,
+        userId,
         action,
       },
+      user,
     }) => {
       const orderBy = getOrder(order)
       const decodedSearch = decodeURIComponent(search)
@@ -73,8 +76,8 @@ export const cardsRoute = new Elysia({
 
       if (categoriesFilter) filters.push(categoriesFilter)
 
-      if (user && action) {
-        if (action === 'created') filters.push(eq(cards.authorId, user))
+      if (userId && action) {
+        if (action === 'created') filters.push(eq(cards.authorId, userId))
         else if (ACTION_TABLES[action]) {
           const table = ACTION_TABLES[action]
 
@@ -83,7 +86,9 @@ export const cardsRoute = new Elysia({
               db
                 .select()
                 .from(table)
-                .where(and(eq(table.userId, user), eq(table.cardId, cards.id))),
+                .where(
+                  and(eq(table.userId, userId), eq(table.cardId, cards.id)),
+                ),
             ),
           )
         }
@@ -91,7 +96,7 @@ export const cardsRoute = new Elysia({
 
       const filter = filters.length ? and(...filters) : undefined
 
-      const findCards = getCardsWithCategories(db)
+      const findCards = getCards(db, user?.id)
         .orderBy(orderBy(cards[sort]))
         .limit(limit)
         .offset((page - 1) * limit)
@@ -126,11 +131,19 @@ export const cardsRoute = new Elysia({
         order: t.Union([t.Literal('asc'), t.Literal('desc')], {
           default: 'desc',
         }),
-        sort: t.KeyOf(t.Omit(cardModel, ['categories']), {
-          default: 'createdAt',
-        }),
+        sort: t.KeyOf(
+          t.Omit(cardModel, [
+            'categories',
+            'isFavorite',
+            'isLiked',
+            'isDisliked',
+          ]),
+          {
+            default: 'createdAt',
+          },
+        ),
         categories: t.Array(t.String(), { default: [] }),
-        user: t.Optional(t.Numeric()),
+        userId: t.Optional(t.Numeric()),
         action: t.Optional(
           t.Union([
             t.Literal('created'),
@@ -144,8 +157,8 @@ export const cardsRoute = new Elysia({
   )
   .get(
     ':id',
-    async ({ params: { id } }) => {
-      const [card] = await getCardsWithCategories(db).where(eq(cards.id, id))
+    async ({ params: { id }, user }) => {
+      const [card] = await getCards(db, user?.id).where(eq(cards.id, id))
 
       return card
     },
@@ -156,7 +169,7 @@ export const cardsRoute = new Elysia({
   )
   .post(
     '',
-    ({ body: { categories: bodyCategories, ...restBody } }) =>
+    ({ body: { categories: bodyCategories, ...restBody }, user }) =>
       db.transaction(async tx => {
         const [{ cardId }] = await tx
           .insert(cards)
@@ -190,7 +203,7 @@ export const cardsRoute = new Elysia({
 
         await tx.insert(cardsToCategories).values(cardCategories)
 
-        const [createdCard] = await getCardsWithCategories(tx).where(
+        const [createdCard] = await getCards(tx, user?.id).where(
           eq(cards.id, cardId),
         )
 
