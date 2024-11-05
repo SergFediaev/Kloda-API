@@ -1,11 +1,8 @@
 import { Elysia, t } from 'elysia'
+import { messageModel } from './message'
 import { userModel, userResponseModel } from './users'
 
 const accessToken = t.String()
-
-const messageModel = t.Object({
-  message: t.String(),
-})
 
 export const authModels = new Elysia().model({
   auth: t.Union([
