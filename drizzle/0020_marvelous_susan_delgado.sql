@@ -1,0 +1,1 @@
+ALTER TABLE "cards" ADD COLUMN "favorites" integer DEFAULT 0 NOT NULL;

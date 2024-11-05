@@ -6,6 +6,7 @@ export const cardModel = t.Object({
   title: t.String(),
   content: t.String(),
   categories: t.Array(t.String()),
+  favorites: t.Number(),
   likes: t.Number(),
   dislikes: t.Number(),
   authorId: t.Number(),
@@ -25,10 +26,14 @@ export const cardsModels = new Elysia().model({
   }),
   create: t.Omit(cardModel, [
     'id',
+    'favorites',
     'likes',
     'dislikes',
     'createdAt',
     'updatedAt',
+    'isFavorite',
+    'isLiked',
+    'isDisliked',
   ]),
   favorite: t.Union([
     t.Object({

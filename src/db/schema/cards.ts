@@ -14,6 +14,7 @@ export const cards = pgTable('cards', {
   id: serial('id').primaryKey(),
   title: varchar('name', { length: 256 }).notNull(),
   content: text('content').notNull(),
+  favorites: integer('favorites').default(0).notNull(),
   likes: integer('likes').default(0).notNull(),
   dislikes: integer('dislikes').default(0).notNull(),
   authorId: integer('author_id').notNull(),

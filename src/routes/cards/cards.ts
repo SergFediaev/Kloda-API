@@ -23,6 +23,7 @@ import { Elysia, t } from 'elysia'
 import { cardModel, cardsModels, idModel } from 'models'
 import { authenticatePlugin } from 'plugins'
 import { dislikeRoute } from './dislike'
+import { favoriteRoute } from './favorite'
 import { likeRoute } from './like'
 
 const ACTION_TABLES = {
@@ -36,6 +37,7 @@ export const cardsRoute = new Elysia({
 })
   .use(cardsModels)
   .use(authenticatePlugin)
+  .use(favoriteRoute)
   .use(likeRoute)
   .use(dislikeRoute)
   .get(
