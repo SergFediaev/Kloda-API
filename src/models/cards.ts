@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia'
+import { messageModel } from './message'
 
 export const cardModel = t.Object({
   id: t.Number(),
@@ -28,5 +29,23 @@ export const cardsModels = new Elysia().model({
     'dislikes',
     'createdAt',
     'updatedAt',
+  ]),
+  favorite: t.Union([
+    t.Object({
+      isFavorite: t.Boolean(),
+    }),
+    messageModel,
+  ]),
+  like: t.Union([
+    t.Object({
+      isLiked: t.Boolean(),
+    }),
+    messageModel,
+  ]),
+  dislike: t.Union([
+    t.Object({
+      isDisliked: t.Boolean(),
+    }),
+    messageModel,
   ]),
 })

@@ -1,11 +1,11 @@
 import { cards, db, decrement, dislikedCards, increment, likedCards } from 'db'
 import { and, eq } from 'drizzle-orm'
 import { Elysia } from 'elysia'
-import { cardStatusModels, idModel } from 'models'
+import { cardsModels, idModel } from 'models'
 import { authorizePlugin } from 'plugins'
 
 export const likeRoute = new Elysia()
-  .use(cardStatusModels)
+  .use(cardsModels)
   .use(authorizePlugin)
   .patch(
     ':id/like',
@@ -75,6 +75,6 @@ export const likeRoute = new Elysia()
     },
     {
       params: idModel,
-      response: 'isLiked',
+      response: 'like',
     },
   )
