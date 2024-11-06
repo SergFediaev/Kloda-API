@@ -53,11 +53,13 @@ export const getCards = (database: Database, userId?: number) => {
       isFavorite: getCardStatus(favoriteCards, userId),
       isLiked: getCardStatus(likedCards, userId),
       isDisliked: getCardStatus(dislikedCards, userId),
+      authorUsername: sql<string>`${users.username}`,
     })
     .from(cards)
     .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
     .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
-    .groupBy(cards.id)
+    .leftJoin(users, eq(users.id, cards.authorId))
+    .groupBy(cards.id, users.username)
 
   if (userId) {
     cardsWithCategories

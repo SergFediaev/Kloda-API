@@ -139,6 +139,7 @@ export const cardsRoute = new Elysia({
             'isFavorite',
             'isLiked',
             'isDisliked',
+            'authorUsername',
           ]),
           {
             default: 'createdAt',
