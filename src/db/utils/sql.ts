@@ -8,52 +8,48 @@ import {
   likedCards,
   users,
 } from 'db/schema'
-import {
-  type AnyColumn,
-  type SQL,
-  and,
-  asc,
-  desc,
-  eq,
-  getTableColumns,
-  sql,
-} from 'drizzle-orm'
-import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import { type SQL, and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import type { PgColumn } from 'drizzle-orm/pg-core'
 
 type CardsStatusTable =
   | typeof favoriteCards
   | typeof likedCards
   | typeof dislikedCards
 
-export const lower = (value: AnyPgColumn): SQL => sql`lower(${value})`
+type CardsTable = typeof cards | CardsStatusTable
 
-export const increment = (column: AnyColumn, value = 1): SQL =>
+export const lower = (value: PgColumn): SQL => sql`LOWER(${value})`
+
+export const increment = (column: PgColumn, value = 1): SQL =>
   sql`${column} + ${value}`
 
-export const decrement = (column: AnyColumn, value = 1): SQL =>
+export const decrement = (column: PgColumn, value = 1): SQL =>
   sql`${column} - ${value}`
+
+export const countCards = (table: CardsTable, column: PgColumn): SQL<number> =>
+  sql<number>`(SELECT COUNT(*) FROM ${table} WHERE ${column} = ${users.id})::INT`
 
 export const getOrder = (order: 'asc' | 'desc') =>
   order === 'asc' ? asc : desc
 
 export const getUserCardsCount = () =>
   ({
-    createdCardsCount: sql<number>`count(${cards.authorId})::int`,
-    favoriteCardsCount: sql<number>`count(${favoriteCards.userId})::int`,
-    likedCardsCount: sql<number>`count(${likedCards.userId})::int`,
-    dislikedCardsCount: sql<number>`count(${dislikedCards.userId})::int`,
+    createdCardsCount: countCards(cards, cards.authorId),
+    favoriteCardsCount: countCards(favoriteCards, favoriteCards.userId),
+    likedCardsCount: countCards(likedCards, likedCards.userId),
+    dislikedCardsCount: countCards(dislikedCards, dislikedCards.userId),
   }) as const
 
 const getCardStatus = (table: CardsStatusTable, userId?: number) =>
   userId
-    ? sql<boolean>`coalesce(bool_or(${table.userId} = ${userId}), false)`
-    : sql<boolean>`false`
+    ? sql<boolean>`COALESCE(BOOL_OR(${table.userId} = ${userId}), FALSE)`
+    : sql<boolean>`FALSE`
 
 export const getCards = (database: Database, userId?: number) => {
   const cardsWithCategories = database
     .select({
       ...getTableColumns(cards),
-      categories: sql<string[]>`array_agg(${categories.displayName})`,
+      categories: sql<string[]>`ARRAY_AGG(${categories.displayName})`,
       isFavorite: getCardStatus(favoriteCards, userId),
       isLiked: getCardStatus(likedCards, userId),
       isDisliked: getCardStatus(dislikedCards, userId),

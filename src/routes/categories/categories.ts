@@ -14,7 +14,7 @@ export const categoriesRoute = new Elysia({
         .select({
           name: categories.name,
           displayName: categories.displayName,
-          cardsCount: sql<number>`count(cards.id)::int`,
+          cardsCount: sql<number>`COUNT(cards.id)::INT`,
         })
         .from(categories)
         .leftJoin(
