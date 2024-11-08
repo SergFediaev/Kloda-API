@@ -18,8 +18,17 @@ export const cardModel = t.Object({
   isDisliked: t.Boolean(),
 })
 
+export const encodedCategoriesModel = t.Array(t.String(), { default: [] })
+
 // ToDo: Refactor cards models
 export const cardsModels = new Elysia().model({
+  card: t.Object({
+    card: cardModel,
+    cardPosition: t.Numeric(),
+    prevCardId: t.Numeric(),
+    nextCardId: t.Numeric(),
+    totalCards: t.Numeric(),
+  }),
   cards: t.Object({
     cards: t.Array(cardModel),
     totalCards: t.Numeric(),

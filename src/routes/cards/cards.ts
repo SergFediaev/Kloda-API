@@ -18,13 +18,17 @@ import {
   ilike,
   inArray,
   or,
+  sql,
 } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { cardModel, cardsModels, idModel } from 'models'
+import { cardModel, cardsModels, encodedCategoriesModel, idModel } from 'models'
 import { authenticatePlugin } from 'plugins'
+import type { Nullable } from 'types'
+import { getCategoriesFilter } from 'utils'
 import { dislikeRoute } from './dislike'
 import { favoriteRoute } from './favorite'
 import { likeRoute } from './like'
+import { randomRoute } from './random'
 
 const ACTION_TABLES = {
   favorite: favoriteCards,
@@ -40,6 +44,7 @@ export const cardsRoute = new Elysia({
   .use(favoriteRoute)
   .use(likeRoute)
   .use(dislikeRoute)
+  .use(randomRoute)
   .get(
     '',
     async ({
@@ -49,27 +54,22 @@ export const cardsRoute = new Elysia({
         limit,
         order,
         sort,
-        categories: queryCategories,
+        categories: encodedCategories,
         userId,
         action,
       },
       user,
     }) => {
-      const orderBy = getOrder(order)
       const decodedSearch = decodeURIComponent(search)
-      const decodedCategories = queryCategories.map(category =>
-        decodeURIComponent(category),
-      ) // ToDo: Normalize all filters from query
+      const orderBy = getOrder(order)
+      const categoriesFilter = getCategoriesFilter(encodedCategories)
+      // ToDo: Normalize all filters from query
 
       const searchFilter = decodedSearch
         ? or(
             ilike(cards.title, `%${decodedSearch}%`),
             ilike(cards.content, `%${decodedSearch}%`),
           )
-        : undefined
-
-      const categoriesFilter = decodedCategories.length
-        ? inArray(categories.name, decodedCategories)
         : undefined
 
       const filters: SQL[] = []
@@ -125,7 +125,6 @@ export const cardsRoute = new Elysia({
       }
     },
     {
-      response: 'cards',
       query: t.Object({
         search: t.String({ default: '' }),
         page: t.Numeric({ default: 1 }),
@@ -145,7 +144,7 @@ export const cardsRoute = new Elysia({
             default: 'createdAt',
           },
         ),
-        categories: t.Array(t.String(), { default: [] }),
+        categories: encodedCategoriesModel,
         userId: t.Optional(t.Numeric()),
         action: t.Optional(
           t.Union([
@@ -156,18 +155,61 @@ export const cardsRoute = new Elysia({
           ]),
         ),
       }), // ToDo: Refactor query model
+      response: 'cards',
     },
   )
   .get(
     ':id',
-    async ({ params: { id }, user }) => {
-      const [card] = await getCards(db, user?.id).where(eq(cards.id, id))
+    async ({
+      params: { id },
+      query: { categories: encodedCategories },
+      user,
+    }) => {
+      const findCards = db
+        .select({
+          cardId: cards.id,
+          cardPosition: sql<number>`ROW_NUMBER() OVER(ORDER BY ${cards.id})`,
+          prevCard: sql<
+            Nullable<number>
+          >`LAG(${cards.id}) OVER(ORDER BY ${cards.id})`,
+          nextCard: sql<
+            Nullable<number>
+          >`LEAD(${cards.id}) OVER(ORDER BY ${cards.id})`,
+        })
+        .from(cards)
+        .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
+        .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
+        .orderBy(cards.id)
 
-      return card
+      const categoriesFilter = getCategoriesFilter(encodedCategories)
+
+      if (categoriesFilter) findCards.where(categoriesFilter)
+
+      const foundCards = await findCards
+      const foundCard = foundCards.find(({ cardId }) => cardId === id)
+      const firstCard = foundCards[0]
+      const { cardId, cardPosition, prevCard, nextCard } =
+        foundCard ?? firstCard
+
+      const [card] = await getCards(db, user?.id).where(eq(cards.id, cardId))
+      const totalCards = foundCards.length
+      const prevCardId = prevCard ?? foundCards[totalCards - 1].cardId
+      const nextCardId = nextCard ?? firstCard.cardId
+
+      return {
+        card,
+        cardPosition,
+        prevCardId,
+        nextCardId,
+        totalCards,
+      }
     },
     {
       params: idModel,
-      response: cardModel,
+      query: t.Object({
+        categories: encodedCategoriesModel,
+      }),
+      response: 'card',
     },
   )
   .post(
