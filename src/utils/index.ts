@@ -1,4 +1,5 @@
 export * from './getCategoriesFilter'
 export * from './getRefreshConfig'
+export * from './getUptime'
 export * from './hashToken'
 export * from './parseUserAgent'
