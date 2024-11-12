@@ -10,7 +10,7 @@ export const favoriteCards = pgTable(
       .references(() => users.id),
     cardId: integer('card_id')
       .notNull()
-      .references(() => cards.id),
+      .references(() => cards.id, { onDelete: 'cascade' }),
     addedAt: timestamp('added_at').notNull().defaultNow(),
   },
   ({ userId, cardId }) => ({

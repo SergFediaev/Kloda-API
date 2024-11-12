@@ -155,6 +155,13 @@
       "when": 1730906697135,
       "tag": "0021_far_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1731425760690,
+      "tag": "0022_flowery_jean_grey",
+      "breakpoints": true
     }
   ]
 }

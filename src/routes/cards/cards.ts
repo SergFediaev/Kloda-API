@@ -21,8 +21,14 @@ import {
   sql,
 } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { cardModel, cardsModels, encodedCategoriesModel, idModel } from 'models'
-import { authenticatePlugin } from 'plugins'
+import {
+  cardModel,
+  cardsModels,
+  encodedCategoriesModel,
+  idModel,
+  messageModel,
+} from 'models'
+import { authenticatePlugin, authorizePlugin } from 'plugins'
 import type { Nullable } from 'types'
 import { getCategoriesFilter } from 'utils'
 import { dislikeRoute } from './dislike'
@@ -257,5 +263,41 @@ export const cardsRoute = new Elysia({
     {
       body: 'create',
       response: cardModel,
+    },
+  )
+  .use(authorizePlugin)
+  .delete(
+    ':id',
+    ({ params: { id }, user, set }) => {
+      if (!user) {
+        set.status = 401
+
+        console.error('User not found')
+
+        return { message: 'Unauthorized' }
+      }
+
+      return db.transaction(async tx => {
+        const existingCard = await tx.query.cards.findFirst({
+          where: and(eq(cards.authorId, user.id), eq(cards.id, id)),
+        })
+
+        if (!existingCard) {
+          set.status = 404
+          const message = `Card ID ${id} not found`
+
+          console.error(message)
+
+          return { message }
+        }
+
+        await tx.delete(cards).where(eq(cards.id, id))
+
+        return { message: `Card ID ${id} deleted` }
+      })
+    },
+    {
+      params: idModel,
+      response: messageModel,
     },
   )

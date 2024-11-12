@@ -7,10 +7,10 @@ export const cardsToCategories = pgTable(
   {
     cardId: integer('card_id')
       .notNull()
-      .references(() => cards.id),
+      .references(() => cards.id, { onDelete: 'cascade' }),
     categoryId: integer('category_id')
       .notNull()
-      .references(() => categories.id),
+      .references(() => categories.id, { onDelete: 'cascade' }),
   },
   ({ cardId, categoryId }) => ({
     primaryKey: primaryKey({ columns: [cardId, categoryId] }),
