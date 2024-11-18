@@ -17,6 +17,7 @@ import {
   exists,
   ilike,
   inArray,
+  notExists,
   or,
   sql,
 } from 'drizzle-orm'
@@ -292,6 +293,17 @@ export const cardsRoute = new Elysia({
         }
 
         await tx.delete(cards).where(eq(cards.id, id))
+
+        await tx
+          .delete(categories)
+          .where(
+            notExists(
+              tx
+                .select()
+                .from(cardsToCategories)
+                .where(eq(cardsToCategories.categoryId, categories.id)),
+            ),
+          )
 
         return { message: `Card ID ${id} deleted` }
       })
