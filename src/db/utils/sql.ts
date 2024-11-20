@@ -8,7 +8,17 @@ import {
   likedCards,
   users,
 } from 'db/schema'
-import { type SQL, and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import {
+  type SQL,
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  notExists,
+  sql,
+} from 'drizzle-orm'
 import type { PgColumn } from 'drizzle-orm/pg-core'
 
 type CardsStatusTable =
@@ -86,6 +96,26 @@ export const getCards = (database: Database, userId?: number) => {
   return cardsWithCategories
 }
 
+export const getCard = async (
+  database: Database,
+  cardId: number,
+  userId?: number,
+) => {
+  const [card] = await getCards(database, userId).where(eq(cards.id, cardId))
+
+  return card
+}
+
+// ToDo: Naming
+export const getExistingCard = (
+  database: Database,
+  userId: number,
+  cardId: number,
+) =>
+  database.query.cards.findFirst({
+    where: and(eq(cards.authorId, userId), eq(cards.id, cardId)),
+  })
+
 export const getUsersWithCardsCount = (database: Database) => {
   const { hashedPassword, ...restUser } = getTableColumns(users)
 
@@ -101,3 +131,53 @@ export const getUsersWithCardsCount = (database: Database) => {
     .leftJoin(dislikedCards, eq(dislikedCards.userId, users.id))
     .groupBy(users.id)
 }
+
+export const insertCategories = async (
+  database: Database,
+  bodyCategories: string[],
+  cardId: number,
+) => {
+  if (!bodyCategories.length) {
+    return
+  }
+
+  const normalizedCategories = bodyCategories.map(displayName => ({
+    name: displayName.toLowerCase(),
+    displayName,
+  }))
+
+  await database
+    .insert(categories)
+    .values(normalizedCategories)
+    .onConflictDoNothing()
+
+  // ToDo: IDs naming
+  const existingCategories = await database.query.categories.findMany({
+    where: inArray(
+      categories.name,
+      normalizedCategories.map(({ name }) => name),
+    ),
+    columns: {
+      id: true,
+    },
+  })
+
+  const cardCategories = existingCategories.map(({ id: categoryId }) => ({
+    cardId,
+    categoryId,
+  }))
+
+  await database.insert(cardsToCategories).values(cardCategories)
+}
+
+export const deleteEmptyCategories = (database: Database) =>
+  database
+    .delete(categories)
+    .where(
+      notExists(
+        database
+          .select()
+          .from(cardsToCategories)
+          .where(eq(cardsToCategories.categoryId, categories.id)),
+      ),
+    )

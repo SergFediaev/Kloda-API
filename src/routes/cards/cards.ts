@@ -3,28 +3,22 @@ import {
   cardsToCategories,
   categories,
   db,
+  deleteEmptyCategories,
   dislikedCards,
   favoriteCards,
+  getCard,
   getCards,
+  getExistingCard,
   getOrder,
+  insertCategories,
   likedCards,
 } from 'db'
-import {
-  type SQL,
-  and,
-  count,
-  eq,
-  exists,
-  ilike,
-  inArray,
-  notExists,
-  or,
-  sql,
-} from 'drizzle-orm'
+import { type SQL, and, count, eq, exists, ilike, or, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import {
   cardModel,
   cardsModels,
+  createCardModel,
   encodedCategoriesModel,
   idModel,
   messageModel,
@@ -42,6 +36,10 @@ const ACTION_TABLES = {
   liked: likedCards,
   disliked: dislikedCards,
 } as const
+
+const UNAUTHORIZED = { message: 'Unauthorized' } as const
+
+const logUserError = () => console.error('User not found')
 
 export const cardsRoute = new Elysia({
   prefix: 'v1/cards',
@@ -198,7 +196,7 @@ export const cardsRoute = new Elysia({
       const { cardId, cardPosition, prevCard, nextCard } =
         foundCard ?? firstCard
 
-      const [card] = await getCards(db, user?.id).where(eq(cards.id, cardId))
+      const card = await getCard(db, cardId, user?.id)
       const totalCards = foundCards.length
       const prevCardId = prevCard ?? foundCards[totalCards - 1].cardId
       const nextCardId = nextCard ?? firstCard.cardId
@@ -219,69 +217,88 @@ export const cardsRoute = new Elysia({
       response: 'card',
     },
   )
+  .use(authorizePlugin)
   .post(
     '',
-    ({ body: { categories: bodyCategories, ...restBody }, user }) =>
-      db.transaction(async tx => {
+    ({ body: { categories: bodyCategories, ...restBody }, user, set }) => {
+      if (!user) {
+        set.status = 401
+        logUserError()
+        return UNAUTHORIZED
+      }
+
+      return db.transaction(async tx => {
         const [{ cardId }] = await tx
           .insert(cards)
           .values(restBody)
           .returning({ cardId: cards.id })
 
-        const normalizedCategories = bodyCategories.map(displayName => ({
-          name: displayName.toLowerCase(),
-          displayName,
-        }))
+        await insertCategories(tx, bodyCategories, cardId)
 
-        await tx
-          .insert(categories)
-          .values(normalizedCategories)
-          .onConflictDoNothing()
-
-        const existingCategories = await tx.query.categories.findMany({
-          where: inArray(
-            categories.name,
-            normalizedCategories.map(({ name }) => name),
-          ),
-          columns: {
-            id: true,
-          },
-        })
-
-        const cardCategories = existingCategories.map(({ id: categoryId }) => ({
-          cardId,
-          categoryId,
-        }))
-
-        await tx.insert(cardsToCategories).values(cardCategories)
-
-        const [createdCard] = await getCards(tx, user?.id).where(
-          eq(cards.id, cardId),
-        )
-
-        return createdCard
-      }),
+        return await getCard(tx, cardId, user.id)
+      })
+    },
     {
-      body: 'create',
-      response: cardModel,
+      body: createCardModel,
+      response: 'update',
     },
   )
-  .use(authorizePlugin)
+  .patch(
+    ':id',
+    ({
+      params: { id },
+      body: { categories: bodyCategories, ...restBody },
+      user,
+      set,
+    }) => {
+      if (!user) {
+        set.status = 401
+        logUserError()
+        return UNAUTHORIZED
+      }
+
+      return db.transaction(async tx => {
+        const existingCard = await getExistingCard(tx, user.id, id)
+
+        if (!existingCard) {
+          set.status = 404
+          const message = `Card ID ${id} not found`
+
+          console.error(message)
+
+          return { message }
+        }
+
+        await tx.update(cards).set(restBody).where(eq(cards.id, id))
+
+        await tx
+          .delete(cardsToCategories)
+          .where(eq(cardsToCategories.cardId, id))
+
+        await insertCategories(tx, bodyCategories, id)
+
+        await deleteEmptyCategories(tx)
+
+        return await getCard(tx, id, user.id)
+      })
+    },
+    {
+      params: idModel,
+      body: 'edit',
+      response: 'update',
+    },
+  )
   .delete(
     ':id',
     ({ params: { id }, user, set }) => {
       if (!user) {
         set.status = 401
-
-        console.error('User not found')
-
-        return { message: 'Unauthorized' }
+        logUserError()
+        return UNAUTHORIZED
       }
 
       return db.transaction(async tx => {
-        const existingCard = await tx.query.cards.findFirst({
-          where: and(eq(cards.authorId, user.id), eq(cards.id, id)),
-        })
+        const existingCard = await getExistingCard(tx, user.id, id)
 
         if (!existingCard) {
           set.status = 404
@@ -294,16 +311,7 @@ export const cardsRoute = new Elysia({
 
         await tx.delete(cards).where(eq(cards.id, id))
 
-        await tx
-          .delete(categories)
-          .where(
-            notExists(
-              tx
-                .select()
-                .from(cardsToCategories)
-                .where(eq(cardsToCategories.categoryId, categories.id)),
-            ),
-          )
+        await deleteEmptyCategories(tx)
 
         return { message: `Card ID ${id} deleted` }
       })

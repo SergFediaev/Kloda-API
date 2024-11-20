@@ -6,7 +6,7 @@ import { authModels } from 'models'
 import { jwtAccessPlugin, jwtRefreshPlugin } from 'plugins'
 import { getRefreshConfig, hashToken, parseUserAgent } from 'utils'
 
-const unauthorized = { message: 'Unauthorized' }
+const UNAUTHORIZED = { message: 'Unauthorized' } as const
 
 export const refreshRoute = new Elysia()
   .use(authModels)
@@ -30,7 +30,7 @@ export const refreshRoute = new Elysia()
 
         console.error('Cookie refresh token not found')
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       const payload = await jwtRefresh.verify(cookieToken)
@@ -40,7 +40,7 @@ export const refreshRoute = new Elysia()
 
         console.error('Invalid cookie refresh token')
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       const tokenId = payload.sub
@@ -50,7 +50,7 @@ export const refreshRoute = new Elysia()
 
         console.error('Cookie refresh token ID not found')
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       const [existingToken] = await db
@@ -63,7 +63,7 @@ export const refreshRoute = new Elysia()
 
         console.error('User refresh token not found')
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       const hashedCookieToken = hashToken(cookieToken)
@@ -73,7 +73,7 @@ export const refreshRoute = new Elysia()
 
         console.error("Refresh tokens don't match")
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       const [user] = await db
@@ -86,7 +86,7 @@ export const refreshRoute = new Elysia()
 
         console.error('User not found')
 
-        return unauthorized
+        return UNAUTHORIZED
       }
 
       await db.delete(refreshTokens).where(eq(refreshTokens.id, tokenId))

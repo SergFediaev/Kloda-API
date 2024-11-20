@@ -18,6 +18,19 @@ export const cardModel = t.Object({
   isDisliked: t.Boolean(),
 })
 
+export const createCardModel = t.Omit(cardModel, [
+  'id',
+  'favorites',
+  'likes',
+  'dislikes',
+  'authorUsername',
+  'createdAt',
+  'updatedAt',
+  'isFavorite',
+  'isLiked',
+  'isDisliked',
+])
+
 export const encodedCategoriesModel = t.Array(t.String(), { default: [] })
 
 // ToDo: Refactor cards models
@@ -34,18 +47,8 @@ export const cardsModels = new Elysia().model({
     totalCards: t.Numeric(),
     totalPages: t.Numeric(),
   }),
-  create: t.Omit(cardModel, [
-    'id',
-    'favorites',
-    'likes',
-    'dislikes',
-    'authorUsername',
-    'createdAt',
-    'updatedAt',
-    'isFavorite',
-    'isLiked',
-    'isDisliked',
-  ]),
+  edit: t.Omit(createCardModel, ['authorId']),
+  update: t.Union([cardModel, messageModel]),
   favorite: t.Union([
     t.Object({
       isFavorite: t.Boolean(),
