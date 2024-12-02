@@ -42,6 +42,11 @@ export const countCards = (table: CardsTable, column: PgColumn): SQL<number> =>
 export const getOrder = (order: 'asc' | 'desc') =>
   order === 'asc' ? asc : desc
 
+export const aggregateCategories = () =>
+  sql<
+    string[]
+  >`COALESCE(ARRAY_AGG(${categories.displayName}) FILTER (WHERE ${categories.id} IS NOT NULL), '{}')`
+
 export const getUserCardsCount = () =>
   ({
     createdCardsCount: countCards(cards, cards.authorId),
@@ -59,9 +64,7 @@ export const getCards = (database: Database, userId?: number) => {
   const cardsWithCategories = database
     .select({
       ...getTableColumns(cards),
-      categories: sql<
-        string[]
-      >`COALESCE(ARRAY_AGG(${categories.displayName}) FILTER (WHERE ${categories.id} IS NOT NULL), '{}')`,
+      categories: aggregateCategories(),
       isFavorite: getCardStatus(favoriteCards, userId),
       isLiked: getCardStatus(likedCards, userId),
       isDisliked: getCardStatus(dislikedCards, userId),

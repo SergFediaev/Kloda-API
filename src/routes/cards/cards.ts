@@ -27,6 +27,7 @@ import { authenticatePlugin, authorizePlugin } from 'plugins'
 import type { Nullable } from 'types'
 import { getCategoriesFilter } from 'utils'
 import { dislikeRoute } from './dislike'
+import { exportRoute } from './export'
 import { favoriteRoute } from './favorite'
 import { likeRoute } from './like'
 import { randomRoute } from './random'
@@ -50,6 +51,7 @@ export const cardsRoute = new Elysia({
   .use(likeRoute)
   .use(dislikeRoute)
   .use(randomRoute)
+  .use(exportRoute)
   .get(
     '',
     async ({
