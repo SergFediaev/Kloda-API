@@ -6,6 +6,7 @@ if (!url) {
   throw new Error('Missing DATABASE_URL')
 }
 
+// noinspection Annotator
 export default defineConfig({
   schema: './src/db/schema/*',
   out: './drizzle',

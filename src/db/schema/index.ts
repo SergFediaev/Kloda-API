@@ -1,7 +1,6 @@
 export * from './cards'
 export * from './cardsToCategories'
 export * from './categories'
-export * from './comments'
 export * from './dislikedCards'
 export * from './favoriteCards'
 export * from './likedCards'

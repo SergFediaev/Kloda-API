@@ -162,6 +162,13 @@
       "when": 1731425760690,
       "tag": "0022_flowery_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1733694680271,
+      "tag": "0023_spicy_aaron_stack",
+      "breakpoints": true
     }
   ]
 }
