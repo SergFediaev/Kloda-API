@@ -24,6 +24,7 @@ export const refreshTokens = pgTable('refresh_tokens', {
 })
 
 // ToDo: Relations
+// noinspection JSUnusedGlobalSymbols
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, {
     fields: [refreshTokens.userId],

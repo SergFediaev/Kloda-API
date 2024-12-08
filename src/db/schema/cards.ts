@@ -22,6 +22,7 @@ export const cards = pgTable('cards', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// noinspection JSUnusedGlobalSymbols
 export const cardsRelations = relations(cards, ({ one, many }) => ({
   author: one(users, {
     fields: [cards.authorId],

@@ -29,6 +29,7 @@ export const users = pgTable(
   }),
 )
 
+// noinspection JSUnusedGlobalSymbols
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
   cards: many(cards),

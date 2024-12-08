@@ -18,6 +18,7 @@ export const dislikedCards = pgTable(
   }),
 )
 
+// noinspection JSUnusedGlobalSymbols
 export const dislikedCardsRelations = relations(dislikedCards, ({ one }) => ({
   user: one(users, {
     fields: [dislikedCards.userId],

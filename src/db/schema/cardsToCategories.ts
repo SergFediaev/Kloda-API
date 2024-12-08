@@ -17,6 +17,7 @@ export const cardsToCategories = pgTable(
   }),
 )
 
+// noinspection JSUnusedGlobalSymbols
 export const cardsToCategoriesRelations = relations(
   cardsToCategories,
   ({ one }) => ({

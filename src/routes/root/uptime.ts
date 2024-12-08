@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import type { Nullable } from 'types'
 import { getUptime } from 'utils'
 
+// noinspection JSUnusedGlobalSymbols
 export const uptimeRoute = new Elysia()
   .state('timer', null as Nullable<Timer>)
   .ws('uptime', {

@@ -10,6 +10,7 @@ export const categories = pgTable('categories', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// noinspection JSUnusedGlobalSymbols
 export const categoriesRelations = relations(categories, ({ many }) => ({
   cards: many(cardsToCategories),
 }))
