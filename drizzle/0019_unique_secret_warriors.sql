@@ -1,1 +1,0 @@
-ALTER TABLE "disliked_cards" RENAME COLUMN "liked_at" TO "disliked_at";

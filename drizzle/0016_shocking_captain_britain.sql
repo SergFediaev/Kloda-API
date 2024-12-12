@@ -1,1 +1,0 @@
-ALTER TABLE "cards" ALTER COLUMN "author_id" SET DATA TYPE integer;

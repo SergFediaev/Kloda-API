@@ -1,1 +1,0 @@
-ALTER TABLE "refresh_tokens" ADD COLUMN "key" serial PRIMARY KEY NOT NULL;
