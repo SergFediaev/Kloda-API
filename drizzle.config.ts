@@ -6,7 +6,7 @@ if (!url) {
   throw new Error('Missing DATABASE_URL')
 }
 
-// noinspection JSUnusedGlobalSymbols
+// noinspection JSUnusedGlobalSymbols,Annotator
 export default defineConfig({
   schema: './src/db/schema/*',
   out: './drizzle',
