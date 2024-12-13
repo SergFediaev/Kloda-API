@@ -198,6 +198,7 @@ export const cardsRoute = new Elysia({
         .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
         .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
         .orderBy(cards.id)
+        .groupBy(cards.id)
 
       const categoriesFilter = getCategoriesFilter(encodedCategories)
 
