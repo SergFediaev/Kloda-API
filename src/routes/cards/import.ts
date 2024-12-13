@@ -4,7 +4,7 @@ import { messageModel } from 'models'
 import { authorizePlugin } from 'plugins'
 import type { Nullable } from 'types'
 
-const IMPORT_CARDS_LIMIT = Number(process.env.IMPORT_CARDS_LIMIT || 10)
+const IMPORT_CARDS_LIMIT = Number(Bun.env.IMPORT_CARDS_LIMIT || 10)
 const key = process.env.GOOGLE_SHEETS_API_KEY
 
 if (!key) {
