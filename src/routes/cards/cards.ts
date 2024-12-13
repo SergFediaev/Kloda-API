@@ -293,6 +293,49 @@ export const cardsRoute = new Elysia({
     },
   )
   .delete(
+    '',
+    ({ user, set }) => {
+      if (!user) {
+        set.status = 401
+        logUserError()
+        return UNAUTHORIZED
+      }
+
+      return db.transaction(async tx => {
+        const existingCards = await tx
+          .select()
+          .from(cards)
+          .where(eq(cards.authorId, user.id))
+
+        if (!existingCards.length) {
+          set.status = 404
+          const message = 'Cards not found'
+
+          console.error(message)
+
+          return { message }
+        }
+
+        const deletedCards = await tx
+          .delete(cards)
+          .where(eq(cards.authorId, user.id))
+          .returning()
+
+        await deleteEmptyCategories(tx)
+
+        return { deletedCardsCount: deletedCards.length }
+      })
+    },
+    {
+      response: t.Union([
+        t.Object({
+          deletedCardsCount: t.Number(),
+        }),
+        messageModel,
+      ]),
+    },
+  )
+  .delete(
     ':id',
     ({ params: { id }, user, set }) => {
       if (!user) {
