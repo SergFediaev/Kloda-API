@@ -13,7 +13,16 @@ import {
   insertCategories,
   likedCards,
 } from 'db'
-import { type SQL, and, count, eq, exists, ilike, or, sql } from 'drizzle-orm'
+import {
+  type SQL,
+  and,
+  countDistinct,
+  eq,
+  exists,
+  ilike,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import {
   cardModel,
@@ -113,7 +122,7 @@ export const cardsRoute = new Elysia({
         .offset((page - 1) * limit)
 
       const countCards = db
-        .select({ totalCards: count() })
+        .select({ totalCards: countDistinct(cards.id) })
         .from(cards)
         .leftJoin(cardsToCategories, eq(cards.id, cardsToCategories.cardId))
         .leftJoin(categories, eq(categories.id, cardsToCategories.categoryId))
