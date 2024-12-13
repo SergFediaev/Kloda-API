@@ -11,6 +11,7 @@ COPY src src
 COPY drizzle drizzle
 COPY tsconfig.json .
 COPY public public
+COPY .env.production .
 
 ENV NODE_ENV production
 CMD ["bun", "src/index.ts"]
