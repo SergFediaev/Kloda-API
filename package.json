@@ -14,7 +14,6 @@
     "@elysiajs/server-timing": "^1.1.0",
     "@elysiajs/static": "^1.1.1",
     "@elysiajs/swagger": "^1.1.1",
-    "@types/ua-parser-js": "^0.7.39",
     "csv-stringify": "^6.5.2",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
@@ -27,6 +26,7 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.1",
     "bun-types": "latest",
+    "@types/ua-parser-js": "^0.7.39",
     "drizzle-kit": "^0.24.2"
   },
   "module": "src/index.js"
