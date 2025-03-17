@@ -1,5 +1,4 @@
-// const maxAge = 10 * 60 * 1_000 // 10 minutes
-const maxAge = 60 * 1_000 // 1 minute
+const maxAge = 10 * 60 * 1_000 // 10 minutes
 
 // ToDo: 10 min? Sync with JWT
 export const getRefreshConfig = () => ({
